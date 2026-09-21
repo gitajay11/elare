@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, Boxes, Gift, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingBag, Sparkles, Star, Tag, Tags, Users, X } from 'lucide-react';
 import { useAuth, PageLoader, Seo, Logo, InstallButton } from '@elare/ui';
@@ -20,6 +20,11 @@ const LINKS = [
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
+function RestrictedRedirect({ signOut }: { signOut: () => Promise<void> }) {
+  useEffect(() => { void signOut(); }, [signOut]);
+  return <Navigate to="/signin?restricted=1" replace />;
+}
+
 export default function AdminLayout() {
   const { user, loading, isAdmin, profile, signOut } = useAuth();
   const location = useLocation();
@@ -29,21 +34,10 @@ export default function AdminLayout() {
   const logout = async () => { navigate('/signin', { replace: true }); await signOut(); };
   if (loading) return <PageLoader />;
   if (!user) return <Navigate to={location.pathname === '/' ? '/signin' : `/signin?next=${encodeURIComponent(location.pathname)}`} replace />;
-  if (!isAdmin) {
-    return (
-      <div className="container-x grid min-h-[60vh] place-items-center text-center">
-        <div>
-          <p className="eyebrow">Admin</p>
-          <h1 className="mt-2 text-3xl">This area is for the Élaré team.</h1>
-          <p className="mt-2 text-sm text-ink-soft">Signed in as {user.email}. Ask an administrator to grant you access.</p>
-          <div className="mt-6 flex justify-center gap-3">
-            <a href={STORE_URL} className="rounded-full border border-line px-5 py-2.5 text-sm font-semibold hover:border-rose hover:text-rose">Back to store</a>
-            <button type="button" onClick={logout} className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white">Sign out</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Profile still loading: wait rather than judging too early.
+  if (!profile) return <PageLoader />;
+  // Not an active admin (e.g. a customer session shared from the store): end it and warn on the sign-in page.
+  if (!isAdmin) return <RestrictedRedirect signOut={signOut} />;
   const nav = (
     <nav className="space-y-0.5" aria-label="Admin">
       {LINKS.map((l) => (

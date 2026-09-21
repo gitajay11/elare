@@ -1,26 +1,36 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Seo, useAuth, Button, Input, PageLoader, Logo, toast } from '@elare/ui';
-import { client } from '@/lib/neon';
+import { ShieldAlert } from 'lucide-react';
+import { Seo, useAuth, Button, Input, PageLoader, Logo, Modal, toast } from '@elare/ui';
+import { client, STORE_URL } from '@/lib/neon';
 
 type Mode = 'signin' | 'reset';
 
 /** Team sign-in. There is no self-service sign-up: admin access is granted by an existing administrator. */
 export default function Auth() {
   const [sp] = useSearchParams();
-  const { user, loading, signIn, resetPassword, configured } = useAuth();
-  const navigate = useNavigate();
+  const { user, profile, loading, isAdmin, signIn, signOut, resetPassword, configured } = useAuth();
   const next = sp.get('next') || '/';
   const [mode, setMode] = useState<Mode>('signin');
   const [form, setForm] = useState({ email: '', password: '' });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Set when a valid account without admin rights tried to enter (here or via the layout guard).
+  const [restricted, setRestricted] = useState(sp.get('restricted') === '1');
 
   useEffect(() => setError(null), [mode]);
+  // A signed-in account that is not an active admin is ended immediately.
+  useEffect(() => {
+    if (user && profile && !isAdmin) {
+      setRestricted(true);
+      signOut();
+    }
+  }, [user, profile, isAdmin, signOut]);
+
   if (loading) return <PageLoader />;
-  if (user) return <Navigate to={next} replace />;
+  if (user && isAdmin) return <Navigate to={next} replace />;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -29,7 +39,8 @@ export default function Auth() {
     try {
       if (mode === 'signin') {
         await signIn(form.email, form.password);
-        navigate(next, { replace: true });
+        // The effect above decides: admins are redirected, everyone else is refused.
+        setForm((f) => ({ ...f, password: '' }));
       } else {
         await resetPassword(form.email);
         setMessage('If that email is registered, a reset link is on its way.');
@@ -44,6 +55,14 @@ export default function Auth() {
   return (
     <div className="container-x grid min-h-screen items-center py-12">
       <Seo title="Team sign in" noindex />
+      <Modal open={restricted} onClose={() => setRestricted(false)} size="sm" title={<span className="inline-flex items-center gap-2 text-danger"><ShieldAlert size={22} /> Restricted entry</span>}>
+        <p className="text-sm text-ink-soft">This portal is for the Élaré team only. The account you signed in with does not have admin access, so it has been signed out.</p>
+        <p className="mt-2 text-sm text-ink-soft">If you are a customer, please use the store. If you should have access, ask an administrator to grant it.</p>
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
+          {STORE_URL && <a href={STORE_URL} className="rounded-full border border-line px-4 py-2 text-sm font-semibold hover:border-rose hover:text-rose">Go to the store</a>}
+          <Button onClick={() => setRestricted(false)}>OK</Button>
+        </div>
+      </Modal>
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="mx-auto w-full max-w-md rounded-[28px] border border-line bg-white p-7 shadow-soft sm:p-9">
         <div className="mb-6 flex justify-center"><Logo /></div>
         {!configured && <p className="mb-4 rounded-xl bg-danger/10 px-4 py-3 text-[13px] text-danger">Not configured yet — set <code>VITE_NEON_URL</code> and <code>VITE_API_URL</code> in <code>.env.local</code>.</p>}
