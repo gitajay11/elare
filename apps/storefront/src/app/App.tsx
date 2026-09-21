@@ -2,7 +2,8 @@ import { Suspense, lazy, useEffect, useState } from 'react';
 import { Navigate, Outlet, Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
 import { createAccountPath, signInPath } from '@/lib/routes';
 import { useReducedMotion } from 'framer-motion';
-import { Toaster, PageLoader } from '@elare/ui';
+import { Toaster, PageLoader, OfflineBanner } from '@elare/ui';
+import { ServiceWorker } from '@/lib/pwa';
 import { isConfigured } from '@/lib/neon';
 import { useCartSync } from '@/lib/hooks';
 import { Navbar } from '@/components/layout/Navbar';
@@ -83,6 +84,7 @@ function StorefrontLayout() {
   return (
     <div className="flex min-h-screen flex-col">
       <ConfigBanner />
+      <OfflineBanner />
       <Navbar />
       <main className="flex-1">
         {/* Remount per route with a CSS enter animation: no exit phase to race a lazy chunk. */}
@@ -118,6 +120,7 @@ export default function StoreApp() {
     <>
       <ScrollToTop />
       <CursorDot />
+      <ServiceWorker />
       <Routes>
         <Route element={<StorefrontLayout />}>
           <Route path="/" element={<Home />} />

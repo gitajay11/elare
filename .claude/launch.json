@@ -32,6 +32,17 @@
         "dev"
       ],
       "port": 8790
+    },
+    {
+      "name": "elare-store-preview",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@elare/storefront",
+        "preview"
+      ],
+      "port": 4173,
+      "autoPort": true
     }
   ]
 }

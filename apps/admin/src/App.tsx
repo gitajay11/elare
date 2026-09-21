@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { Toaster, PageLoader } from '@elare/ui';
+import { Toaster, PageLoader, OfflineBanner } from '@elare/ui';
+import { ServiceWorker } from '@/lib/pwa';
 
 // The back-office: its own site (apps/admin) deployed on the admin subdomain.
 // None of the storefront pages are part of this bundle.
@@ -35,6 +36,8 @@ export default function AdminApp() {
   return (
     <>
       <ScrollToTop />
+      <ServiceWorker />
+      <OfflineBanner />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/signin" element={<Auth />} />

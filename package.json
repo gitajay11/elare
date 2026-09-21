@@ -17,11 +17,13 @@
     "api:build": "pnpm --filter @elare/api build",
     "storefront:dev": "pnpm --filter @elare/storefront dev",
     "admin:dev": "pnpm --filter @elare/admin dev",
-    "vercel-build": "node scripts/vercel-build.mjs"
+    "vercel-build": "node scripts/vercel-build.mjs",
+    "icons": "node scripts/generate-pwa-icons.mjs"
   },
   "devDependencies": {
     "@neon/config": "^1.7.2",
     "@neon/env": "^1.4.3",
+    "sharp": "^0.34.5",
     "turbo": "^2.5.6",
     "typescript": "^5.9.0"
   }

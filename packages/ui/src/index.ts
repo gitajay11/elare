@@ -7,6 +7,7 @@ export * from './components/Accordion';
 export * from './components/Spinner';
 export * from './components/Logo';
 export * from './components/OrderTimeline';
+export * from './components/Pwa';
 export * from './toast-store';
 export * from './motion';
 export * from './seo';
