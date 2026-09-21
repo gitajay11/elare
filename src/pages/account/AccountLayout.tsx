@@ -1,7 +1,7 @@
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Heart, LayoutDashboard, LogOut, MapPin, Package, Sparkles, Star, Tag, User } from 'lucide-react';
 import { useAuth } from '@/store/auth';
-import { ADMIN_URL } from '@/lib/supabase';
+import { ADMIN_URL } from '@/lib/neon';
 import { cn } from '@/lib/utils';
 import { PageLoader } from '@/components/ui/Spinner';
 

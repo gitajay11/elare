@@ -1,4 +1,4 @@
-// Shapes returned by the Postgres RPCs in supabase/migrations/0002_functions.sql.
+// Shapes returned by the Postgres RPCs in db/migrations/0002_functions.sql.
 // The database is the source of truth for every number here.
 
 export type OrderStatus =

@@ -2,104 +2,116 @@
 
 Production-ready full-stack e-commerce for a premium makeup brand — **two separate websites** (customer storefront and admin back-office) built from one codebase, sharing components, the API layer and the database.
 
-- **Storefront** — React 19 · TypeScript · Vite 7 · Tailwind CSS 4 · Framer Motion · TanStack Query · Zustand
-- **Backend** — Supabase (Postgres + Auth + Storage + Edge Functions). All business rules live in SQL functions with Row Level Security.
-- **Payments** — Razorpay via Edge Functions (secrets never reach the browser). Cash on delivery works with no gateway configured.
+- **Storefront / Admin** — React 19 · TypeScript · Vite 7 · Tailwind CSS 4 · Framer Motion · TanStack Query · Zustand
+- **Backend — Neon** — Lakebase Postgres (all business rules in SQL functions + RLS) · Managed Better Auth · Data API (PostgREST-compatible) · Object Storage (`media` bucket) · a Neon Function for payments and uploads
+- **Payments** — Razorpay through the Neon Function (secrets never reach the browser). Cash on delivery works with no gateway configured.
 
-## Quick start (no Supabase project needed)
+## Architecture
+
+```
+Browser (storefront / admin, Vercel)
+  │  @neondatabase/neon-js
+  ├─► Neon Auth (Managed Better Auth)   sign-up / sign-in / sessions / JWTs
+  ├─► Neon Data API (PostgREST)         rpc('quote_cart'…), from('addresses')…  → RLS as `authenticated` / `anonymous`
+  └─► Neon Function `api` (Hono)         POST /payments/razorpay/*, POST /uploads → Object Storage `media`
+                                         connects to Postgres as the owner (only principal allowed to settle payments)
+```
+
+```
+src/
+  lib/neon.ts         the Neon client (Supabase-shaped auth adapter + Data API) and apiFetch() for the Function
+  lib/api.ts          every backend call; the UI never computes prices, stock, points or permissions
+  apps/StoreApp.tsx   customer routes         apps/AdminApp.tsx   back-office routes (own login at /login)
+  store/, hooks/, components/, pages/
+db/migrations/        0001 schema · 0002 business logic (≈45 RPCs) · 0003 RLS + grants · 0004 catalogue seed
+functions/api/        the Neon Function (Node 24, Hono, pg, jose, @aws-sdk/client-s3)
+neon.ts               infrastructure declaration: auth, dataApi, buckets.media, functions.api
+scripts/              db-migrate · db-test (PGlite) · build-function · dev-function
+```
+
+## Setup
+
+### 1. Neon project
 
 ```bash
 npm install
-npm run dev:local
+npm i -g neon && neon login          # or set NEON_API_KEY
+neon link --project-id <project-id> --branch production -y   # writes .neon and pulls DATABASE_URL etc. into .env.local
+neon deploy --env .env.local          # provisions Auth, Data API, the media bucket and deploys the api Function
+npm run db:migrate                    # applies db/migrations to the linked branch (tracked in schema_migrations)
 ```
 
-`dev:local` boots Postgres-in-WASM (PGlite), applies the real migrations from `supabase/migrations`, exposes a Supabase-compatible API on `http://localhost:54321`, and starts Vite. **The first account you create becomes the admin.** Data resets on restart. Online payments are unavailable in this mode — use Cash on delivery.
+The project must be in an AWS region that supports Functions and Object Storage (`aws-us-east-2`, `aws-us-east-1`, `aws-eu-central-1`, `aws-ap-southeast-1`).
 
-`npm run db:test` runs the migrations and 139 end-to-end assertions (pricing, coupons, gifts, stock locking, order lifecycle, loyalty, reviews, wishlist redemption, admin operations, RLS) against PGlite.
+If you prefer the console/MCP path instead of the CLI: enable **Managed Better Auth** and the **Data API** (with default grants) on the branch, create a `public_read` bucket named `media`, run `npm run db:migrate` with `DATABASE_URL` set, and deploy `functions/api` (see below).
 
-## Running against Supabase
+### 2. Frontend env
 
-1. Create a project at supabase.com, then copy `.env.example` → `.env` and fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
-2. Apply the migrations, in order, either with the CLI (`supabase link` → `supabase db push`) or by pasting each file from `supabase/migrations/` into the SQL editor:
-   `0001_schema.sql` → `0002_functions.sql` → `0003_rls.sql` → `0004_storage.sql` → `0005_seed.sql` (seed is optional; it only creates the catalogue — no orders, reviews or customers).
-3. Sign up in the app, then promote yourself in the SQL editor:
-   ```sql
-   update public.profiles set role = 'admin' where email = 'you@example.com';
-   ```
-4. In Authentication → URL configuration add your site URL and `https://<your-site>/auth/callback` as a redirect URL.
-5. `npm run dev` (storefront) and `npm run dev:admin` (back-office, port 5174). Builds: `npm run build:store`, `npm run build:admin`.
+Copy `.env.example` → `.env` (or let `neon link` write `.env.local`) and set:
+
+| Variable | Purpose |
+|---|---|
+| `VITE_NEON_URL` | `https://<endpoint-host>/<database>` from the connection string, no credentials. The SDK derives the Auth and Data API URLs. |
+| `VITE_API_URL` | Public URL of the `api` Function (`neon functions get api` → `invocation_url`). Locally: `http://localhost:8790` from `npm run functions:dev`. |
+| `VITE_SITE_URL`, `VITE_STORE_URL`, `VITE_ADMIN_URL` | Canonical URLs and cross-links between the two sites |
+| `VITE_RAZORPAY_KEY_ID` | Public key id; enables "Pay online" |
+| `VITE_APP` | `admin` on the admin Vercel project (default `store`) |
+
+### 3. First admin
+
+Sign up in the storefront, then promote the account:
+
+```sql
+update public.profiles set role = 'admin' where email = 'you@example.com';
+```
+
+(Profiles are created lazily by `ensure_profile()` on first sign-in; run the update after the first visit.)
+
+### 4. Trusted origins
+
+Localhost is pre-approved. Add production origins for Auth: `neon neon-auth domain add https://shop.example.com` (and the admin origin), and list them in `ALLOWED_ORIGINS` for the Function.
+
+## Run locally
+
+```bash
+npm run dev           # storefront on :5173, against the Neon branch in .env.local
+npm run dev:admin     # admin on :5174
+npm run functions:dev # the api Function on :8790 (uploads, payments) — set VITE_API_URL=http://localhost:8790
+npm run db:test       # 140 backend assertions on PGlite (no network)
+```
+
+Neon sessions live on the auth origin, so a sign-in on the storefront is also visible to the admin site; non-admins are refused there.
 
 ## Two sites, one repo
 
 | | Storefront | Admin |
 |---|---|---|
 | Entry | `src/apps/StoreApp.tsx` | `src/apps/AdminApp.tsx` |
-| Build | `npm run build:store` (or `VITE_APP=store npm run build`) | `npm run build:admin` (or `VITE_APP=admin npm run build`) |
+| Build | `npm run build:store` | `npm run build:admin` (or `VITE_APP=admin npm run build`) |
 | Routes | `/`, `/shop`, `/product/:slug`, `/checkout`, `/account/*` | `/login`, `/`, `/products`, `/orders`, `/customers`, … |
-| Env | `VITE_ADMIN_URL` (shows an "Admin dashboard" link to admins) | `VITE_STORE_URL` ("Back to store", product previews) |
 
-The app is chosen at build time from the Vite mode, so each bundle contains only its own pages. Deploy them as **two Vercel projects from the same repository**: both use `npm run build`; the admin project sets the environment variable `VITE_APP=admin`. Add both domains to Supabase Auth → URL configuration. `npm run dev:local` starts both sites (storefront :5173, admin :5174) against the local PGlite API.
+Each bundle contains only its own pages. Deploy as **two Vercel projects from this repository**; both use `npm run build`, the admin project sets `VITE_APP=admin`.
 
-### Razorpay (online payments)
+## Payments
 
-Deploy the Edge Functions and set their secrets:
+Set the Function env (`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`) in `.env.local` and `neon deploy --env .env.local`; point the Razorpay webhook at `<api url>/payments/razorpay/webhook` for `payment.captured` / `payment.failed`. Until then the checkout offers Cash on delivery only.
 
-```bash
-supabase functions deploy razorpay-order razorpay-verify razorpay-webhook
-supabase secrets set RAZORPAY_KEY_ID=rzp_... RAZORPAY_KEY_SECRET=... RAZORPAY_WEBHOOK_SECRET=... SITE_URL=https://your-site
-```
-
-Set `VITE_RAZORPAY_KEY_ID` in `.env` (the public key id) — the "Pay online" option appears automatically. Point a Razorpay webhook at `https://<project>.functions.supabase.co/razorpay-webhook` for `payment.captured` and `payment.failed`. `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are injected into Edge Functions by Supabase.
-
-## Architecture
-
-```
-src/
-  lib/api.ts          every backend call (RPC + RLS tables); the only place the UI talks to the DB
-  lib/types.ts        payload shapes returned by the SQL functions
-  store/              auth (context), cart, wishlist, recently viewed, ui (drawer/toasts) — zustand
-  hooks/useStore.ts   store config, server-priced cart quote, cart sync, add-to-bag
-  components/         ui primitives · product (card, image, variant picker, quick view) · cart · layout · home (hero + 3D ring)
-  pages/              storefront · account/* · admin/*  (route-level code splitting; admin never ships to shoppers)
-supabase/
-  migrations/0001     normalised schema: categories, products, shades, variants, inventory (+ movement log), orders, payments, coupons, gifts, reviews, loyalty…
-  migrations/0002     business logic: list/search/facets, product page payload, quote_cart, place_order, order lifecycle, reviews, wishlist redemption, admin RPCs
-  migrations/0003     RLS policies + role-escalation guard
-  migrations/0004     storage buckets and policies
-  migrations/0005     catalogue seed (Signature Lip Edit, lips/eyes/face/tools, coupons, free-gift rule)
-  functions/          Razorpay order / verify / webhook (Deno)
-scripts/
-  db-test.mjs         backend test-suite on PGlite
-  dev-local.mjs       local Supabase-compatible API on PGlite
-```
-
-### Trust boundaries
-
-Prices, discounts, stock, loyalty balances and admin rights are never trusted from the client:
+## Trust boundaries
 
 - `quote_cart` prices the bag server-side; `place_order` re-prices it under row locks, decrements stock, applies the coupon, redeems points and issues the free gift in one transaction.
-- Order status has one source of truth (`orders.status`); every change is journaled by trigger and validated against a transition table. Cancel/refund restock and reverse points automatically.
-- Points are credited only when an order is marked **delivered**, reversed on refund.
-- Reviews can only be written by the account that received the product (delivered order). Social-proof counts are computed from confirmed orders and hidden below an admin-configured minimum.
-- `mark_order_paid` is callable only by the service role (Edge Functions after signature verification).
-- Customers cannot change their own `role`/`status` (trigger) or read other customers' rows (RLS).
+- `orders.status` is the single source of truth; every change is journaled by trigger and validated against a transition table. Cancel/refund restock and reverse points.
+- Points are credited only on **delivered**; reviews only from accounts whose order was delivered; social proof only from confirmed orders.
+- `mark_order_paid` / `mark_payment_failed` are revoked from API roles — only the Function (owner connection) settles payments after signature verification.
+- Customers cannot change their own `role`/`status` (trigger) or read other customers' rows (RLS). The Function verifies every JWT against Neon Auth's JWKS.
 
 ## Scripts
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Vite against the Supabase project in `.env` |
-| `npm run dev:local` | Full stack locally on PGlite (first sign-up = admin) |
-| `npm run api:local` | Only the local API (port 54321) |
-| `npm run db:test` | Backend test-suite |
-| `npm run typecheck` | `tsc -b` |
-| `npm run build` | Production build to `dist/` |
-
-## Environment variables
-
-| Variable | Where | Purpose |
-|---|---|---|
-| `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | `.env` | Supabase project (public) |
-| `VITE_SITE_URL` | `.env` | Canonical URLs / Open Graph |
-| `VITE_RAZORPAY_KEY_ID` | `.env` | Public key id; enables "Pay online" |
-| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `SITE_URL` | Edge Function secrets | Never in the frontend |
+| `npm run dev` / `npm run dev:admin` | Storefront / admin |
+| `npm run build:store` / `npm run build:admin` | Production builds to `dist/` |
+| `npm run db:migrate` | Apply `db/migrations` to `DATABASE_URL` |
+| `npm run db:test` | Backend test-suite on PGlite |
+| `npm run functions:dev` | Run the api Function locally |
+| `npm run functions:build` | Bundle the Function to `dist-functions/api.zip` (API/CI deploys) |
+| `npm run typecheck` | `tsc -b` (app, node, functions) |

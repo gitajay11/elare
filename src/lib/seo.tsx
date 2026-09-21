@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { SITE_URL } from './supabase';
+import { SITE_URL } from './neon';
 
 interface SeoProps {
   title?: string;

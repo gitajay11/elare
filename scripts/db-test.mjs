@@ -1,7 +1,7 @@
-// Runs the Supabase migrations inside PGlite (Postgres compiled to WASM) and
+// Runs the Neon migrations inside PGlite (Postgres compiled to WASM) and
 // exercises the business-logic functions end to end: catalogue, pricing,
 // coupons, free gift, ordering, inventory, loyalty, reviews, wishlist
-// redemption, admin operations and RLS. No network, no Supabase project needed.
+// redemption, admin operations and RLS. No network, no Neon project needed.
 //
 //   npm run db:test
 
@@ -35,23 +35,23 @@ const rpc = async (fn, args = {}) => {
 const as = (uid) => db.query(`select set_config('app.uid', $1, false)`, [uid ?? '']);
 
 // ---------------------------------------------------------------------------
-// Supabase platform stubs (auth schema, storage schema, API roles)
+// Neon platform stubs: the neon_auth schema (Managed Better Auth), the auth.*
+// helpers the Data API provides (uid/jwt from the request JWT) and its roles.
 // ---------------------------------------------------------------------------
 await db.exec(`
+  create schema neon_auth;
+  create table neon_auth."user" (id uuid primary key default gen_random_uuid(), name text, email text unique, "emailVerified" boolean default false, "createdAt" timestamptz default now());
   create schema auth;
-  create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb default '{}'::jsonb);
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('app.uid', true), '')::uuid $$;
-  create schema storage;
-  create table storage.buckets (id text primary key, name text, public boolean, file_size_limit int, allowed_mime_types text[]);
-  create table storage.objects (id uuid default gen_random_uuid(), bucket_id text, name text, owner uuid);
-  create function storage.foldername(name text) returns text[] language sql immutable as $$ select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1] $$;
-  create role anon nologin; create role authenticated nologin; create role service_role nologin;
+  create function auth.user_id() returns text language sql stable as $$ select nullif(current_setting('app.uid', true), '') $$;
+  create function auth.jwt() returns jsonb language sql stable as $$ select jsonb_build_object('sub', nullif(current_setting('app.uid', true), '')) $$;
+  create role anonymous nologin; create role authenticated nologin;
 `);
 
 // ---------------------------------------------------------------------------
 // Migrations
 // ---------------------------------------------------------------------------
-const dir = join(root, 'supabase', 'migrations');
+const dir = join(root, 'db', 'migrations');
 for (const f of readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()) {
   const t = Date.now();
   try {
@@ -67,13 +67,19 @@ for (const f of readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()) {
 // Users
 // ---------------------------------------------------------------------------
 console.log('\n# users & profiles');
-const admin = await one(`insert into auth.users (email, raw_user_meta_data) values ('admin@elare.test', '{"full_name":"Élaré Admin"}') returning id`);
-const cust = await one(`insert into auth.users (email, raw_user_meta_data) values ('priya@example.com', '{"full_name":"Priya Sharma","phone":"9876543210"}') returning id`);
-const cust2 = await one(`insert into auth.users (email, raw_user_meta_data) values ('ananya@example.com', '{"full_name":"Ananya Rao"}') returning id`);
+const admin = await one(`insert into neon_auth."user" (email, name) values ('admin@elare.test', 'Élaré Admin') returning id`);
+const cust = await one(`insert into neon_auth."user" (email, name) values ('priya@example.com', 'Priya Sharma') returning id`);
+const cust2 = await one(`insert into neon_auth."user" (email, name) values ('ananya@example.com', 'Ananya Rao') returning id`);
+// Profiles are created lazily on first authenticated call (ensure_profile / require_user).
+await as(admin.id); await rpc('ensure_profile');
+await as(cust.id); const priya = await rpc('ensure_profile', { p_phone: '9876543210' });
+await as(cust2.id); await rpc('ensure_profile');
+await as(null);
+ok(priya.full_name === 'Priya Sharma' && priya.phone === '9876543210', 'ensure_profile copies name from neon_auth and stores phone', priya);
 await db.query(`update profiles set role = 'admin' where id = $1`, [admin.id]);
-ok((await one(`select count(*)::int as c from profiles`)).c === 3, 'profiles auto-created on signup');
-ok((await one(`select count(*)::int as c from loyalty_accounts`)).c === 3, 'loyalty accounts auto-created');
-ok((await one(`select count(*)::int as c from wishlists`)).c === 3, 'wishlists auto-created');
+ok((await one(`select count(*)::int as c from profiles`)).c === 3, 'profiles created for every auth user');
+ok((await one(`select count(*)::int as c from loyalty_accounts`)).c === 3, 'loyalty accounts created with profiles');
+ok((await one(`select count(*)::int as c from wishlists`)).c === 3, 'wishlists created with profiles');
 
 // ---------------------------------------------------------------------------
 // Catalogue
@@ -430,9 +436,9 @@ await db.query(`update products set is_new = true where id = $1`, [lipstickProdu
 ok((await one(`select is_new from products where id = $1`, [lipstickProduct.id])).is_new === true, 'admin can edit products directly');
 await db.exec(`reset role`);
 await as(null);
-await db.exec(`set role anon`);
-await expectError(() => one(`select count(*)::int as c from orders`), 'denied', 'anon has no access to orders');
-ok((await rpc('get_home')).signature.length === 5, 'anon can load the home payload');
+await db.exec(`set role anonymous`);
+await expectError(() => one(`select count(*)::int as c from orders`), 'denied', 'anonymous role has no access to orders');
+ok((await rpc('get_home')).signature.length === 5, 'anonymous role can load the home payload');
 await db.exec(`reset role`);
 
 console.log(`\n${passed} passed, ${failed} failed`);

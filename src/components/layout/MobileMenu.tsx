@@ -2,7 +2,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronRight, Heart, LogOut, User } from 'lucide-react';
 import { useAuth } from '@/store/auth';
-import { ADMIN_URL } from '@/lib/supabase';
+import { ADMIN_URL } from '@/lib/neon';
 import { useUi } from '@/store/ui';
 import { useStoreConfig } from '@/hooks/useStore';
 import { Drawer } from '@/components/ui/Overlay';

@@ -1,5 +1,6 @@
+import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Check, Package, Sparkles } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -7,11 +8,23 @@ import { Seo } from '@/lib/seo';
 import { money, METHOD_LABEL } from '@/lib/format';
 import { Button } from '@/components/ui/Button';
 import { PageLoader } from '@/components/ui/Spinner';
+import { useCart } from '@/store/cart';
+import { CLEAR_CART_FLAG } from './Checkout';
 import NotFound from './NotFound';
 
 export default function OrderConfirmation() {
   const { id = '' } = useParams();
   const { data: order, isLoading } = useQuery({ queryKey: ['order', id], queryFn: () => api.order(id) });
+  const clearCart = useCart((s) => s.clear);
+  const qc = useQueryClient();
+  // Empty the bag exactly once, for the order that was just placed from checkout.
+  useEffect(() => {
+    if (sessionStorage.getItem(CLEAR_CART_FLAG) === id) {
+      sessionStorage.removeItem(CLEAR_CART_FLAG);
+      clearCart();
+      qc.invalidateQueries({ queryKey: ['quote'] });
+    }
+  }, [id, clearCart, qc]);
   if (isLoading) return <PageLoader />;
   if (!order) return <NotFound />;
   const gift = order.items.find((i) => i.is_gift);

@@ -1,14 +1,15 @@
-// The single gateway between the UI and the database. Every call here maps to
-// a Postgres function (see supabase/migrations/0002_functions.sql) or an RLS-
-// protected table. The UI never computes prices, discounts, stock or points.
-import { supabase } from './supabase';
+// The single gateway between the UI and the backend. Every call here maps to
+// a Postgres function (see db/migrations/0002_functions.sql) or an RLS-protected
+// table via the Neon Data API, or to the Élaré API Function (payments, uploads).
+// The UI never computes prices, discounts, stock or points.
+import { client, apiFetch } from './neon';
 import type {
   Address, CartItemInput, Coupon, HomePayload, Listing, ListingFilters, Order, OrderSummary, ProductCard,
   ProductDetail, Profile, Quote, Review, StoreConfig, WishlistItem, LoyaltyTx,
 } from './types';
 
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase.rpc(fn, args ?? {});
+  const { data, error } = await client.rpc(fn, args ?? {});
   if (error) throw new Error(friendly(error.message));
   return data as T;
 }
@@ -20,7 +21,8 @@ export function friendly(message: string): string {
     .replace(/\s*\(SQLSTATE.*\)$/, '')
     .replace(/^authentication required$/i, 'Please sign in to continue.')
     .replace(/^forbidden$/i, 'You do not have permission to do that.')
-    .replace(/^JWT expired$/i, 'Your session expired — please sign in again.');
+    .replace(/^JWT expired$/i, 'Your session expired — please sign in again.')
+    .replace(/^JWT token has expired$/i, 'Your session expired — please sign in again.');
 }
 
 // ---------------------------------------------------------------------------
@@ -49,6 +51,7 @@ export const api = {
   // -------------------------------------------------------------------------
   // Customer
   // -------------------------------------------------------------------------
+  ensureProfile: (fullName?: string, phone?: string) => rpc<Profile>('ensure_profile', { p_full_name: fullName ?? null, p_phone: phone ?? null }),
   placeOrder: (p: { items: CartItemInput[]; address: Record<string, string>; paymentMethod: 'razorpay' | 'cod'; coupon?: string | null; redeemPoints?: number; note?: string }) =>
     rpc<{ order_id: string; order_number: string; grand_total: number; payment_method: string; status: string }>('place_order', {
       p_items: p.items, p_address: p.address, p_payment_method: p.paymentMethod, p_coupon_code: p.coupon ?? null, p_redeem_points: p.redeemPoints ?? 0, p_note: p.note ?? null,
@@ -71,61 +74,52 @@ export const api = {
   myCoupons: () => rpc<Coupon[]>('list_my_coupons'),
 
   addresses: async () => {
-    const { data, error } = await supabase.from('addresses').select('*').order('is_default', { ascending: false }).order('created_at');
+    const { data, error } = await client.from('addresses').select('*').order('is_default', { ascending: false }).order('created_at');
     if (error) throw new Error(friendly(error.message));
     return data as Address[];
   },
   saveAddress: async (a: Partial<Address> & { user_id?: string }) => {
-    if (a.is_default) await supabase.from('addresses').update({ is_default: false }).neq('id', a.id ?? '00000000-0000-0000-0000-000000000000');
-    const { data, error } = await supabase.from('addresses').upsert(a).select().single();
+    if (a.is_default) await client.from('addresses').update({ is_default: false }).neq('id', a.id ?? '00000000-0000-0000-0000-000000000000');
+    const { data, error } = await client.from('addresses').upsert(a).select().single();
     if (error) throw new Error(friendly(error.message));
     return data as Address;
   },
   deleteAddress: async (id: string) => {
-    const { error } = await supabase.from('addresses').delete().eq('id', id);
+    const { error } = await client.from('addresses').delete().eq('id', id);
     if (error) throw new Error(friendly(error.message));
   },
   profile: async (id: string) => {
-    const { data, error } = await supabase.from('profiles').select('id, email, full_name, phone, avatar_url, role, status').eq('id', id).maybeSingle();
+    const { data, error } = await client.from('profiles').select('id, email, full_name, phone, avatar_url, role, status').eq('id', id).maybeSingle();
     if (error) throw new Error(friendly(error.message));
     return data as Profile | null;
   },
   updateProfile: async (id: string, patch: { full_name?: string; phone?: string }) => {
-    const { error } = await supabase.from('profiles').update(patch).eq('id', id);
+    const { error } = await client.from('profiles').update(patch).eq('id', id);
     if (error) throw new Error(friendly(error.message));
   },
   deleteReview: async (id: string) => {
-    const { error } = await supabase.from('reviews').delete().eq('id', id);
+    const { error } = await client.from('reviews').delete().eq('id', id);
     if (error) throw new Error(friendly(error.message));
   },
-  uploadReviewImage: async (userId: string, file: File) => {
-    const path = `${userId}/${Date.now()}-${file.name.replace(/[^a-z0-9.]+/gi, '-').toLowerCase()}`;
-    const { error } = await supabase.storage.from('review-media').upload(path, file, { cacheControl: '3600' });
-    if (error) throw new Error(friendly(error.message));
-    return supabase.storage.from('review-media').getPublicUrl(path).data.publicUrl;
-  },
+  uploadReviewImage: (_userId: string, file: File) => upload(file, 'review'),
 
   // -------------------------------------------------------------------------
-  // Payments (Edge Functions)
+  // Payments (Élaré API Function)
   // -------------------------------------------------------------------------
-  razorpayOrder: async (orderId: string) => {
-    const { data, error } = await supabase.functions.invoke('razorpay-order', { body: { order_id: orderId } });
-    if (error) throw new Error(await edgeError(error, data));
-    return data as { key_id: string; razorpay_order_id: string; amount: number; currency: string; order_number: string; prefill: { name?: string; email?: string; contact?: string } };
-  },
-  razorpayVerify: async (body: { order_id: string; razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
-    const { data, error } = await supabase.functions.invoke('razorpay-verify', { body });
-    if (error) throw new Error(await edgeError(error, data));
-    return data as { ok: boolean };
-  },
+  razorpayOrder: (orderId: string) =>
+    apiFetch<{ key_id: string; razorpay_order_id: string; amount: number; currency: string; order_number: string; prefill: { name?: string; email?: string; contact?: string } }>(
+      '/payments/razorpay/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id: orderId }) }),
+  razorpayVerify: (body: { order_id: string; razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) =>
+    apiFetch<{ ok: boolean }>('/payments/razorpay/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
 };
 
-async function edgeError(error: { message?: string; context?: Response }, data: unknown): Promise<string> {
-  try {
-    const body = (data as { error?: string })?.error ?? (error.context ? (await error.context.json())?.error : null);
-    if (body) return String(body);
-  } catch { /* fall through */ }
-  return error.message ?? 'Payment service unavailable';
+/** Uploads a file through the API Function into the public media bucket and returns its URL. */
+async function upload(file: File, scope: 'product' | 'review'): Promise<string> {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('scope', scope);
+  const r = await apiFetch<{ url: string }>('/uploads', { method: 'POST', body: form });
+  return r.url;
 }
 
 // ---------------------------------------------------------------------------
@@ -154,30 +148,30 @@ export const adminApi = {
   deleteSubcategory: (id: string) => rpc<void>('admin_delete_subcategory', { p_id: id }),
   reviews: (status?: string, verifiedOnly = false) => rpc<AdminReview[]>('admin_reviews', { p_status: status ?? null, p_verified_only: verifiedOnly }),
   setReviewStatus: async (id: string, status: 'approved' | 'hidden' | 'pending') => {
-    const { error } = await supabase.from('reviews').update({ status }).eq('id', id);
+    const { error } = await client.from('reviews').update({ status }).eq('id', id);
     if (error) throw new Error(friendly(error.message));
   },
   deleteReview: async (id: string) => {
-    const { error } = await supabase.from('reviews').delete().eq('id', id);
+    const { error } = await client.from('reviews').delete().eq('id', id);
     if (error) throw new Error(friendly(error.message));
   },
   coupons: () => rpc<Coupon[]>('admin_coupon_stats'),
   saveCoupon: async (c: Partial<Coupon>) => {
-    const { error } = await supabase.from('coupons').upsert({ ...c, code: c.code?.toUpperCase().trim() });
+    const { error } = await client.from('coupons').upsert({ ...c, code: c.code?.toUpperCase().trim() });
     if (error) throw new Error(friendly(error.message));
   },
   deleteCoupon: async (id: string) => {
-    const { error } = await supabase.from('coupons').delete().eq('id', id);
+    const { error } = await client.from('coupons').delete().eq('id', id);
     if (error) throw new Error(friendly(error.message));
   },
   giftRules: () => rpc<GiftRule[]>('admin_gift_rules'),
   saveGiftRule: async (g: Partial<GiftRule>) => {
     const { id, name, min_quantity, gift_variant_id, gift_quantity, starts_at, ends_at, is_active } = g;
-    const { error } = await supabase.from('gift_rules').upsert({ id, name, min_quantity, gift_variant_id, gift_quantity, starts_at, ends_at, is_active });
+    const { error } = await client.from('gift_rules').upsert({ id, name, min_quantity, gift_variant_id, gift_quantity, starts_at, ends_at, is_active });
     if (error) throw new Error(friendly(error.message));
   },
   deleteGiftRule: async (id: string) => {
-    const { error } = await supabase.from('gift_rules').delete().eq('id', id);
+    const { error } = await client.from('gift_rules').delete().eq('id', id);
     if (error) throw new Error(friendly(error.message));
   },
   variantOptions: () => rpc<{ variant_id: string; product_id: string; label: string; price: number }[]>('admin_variant_options'),
@@ -185,28 +179,23 @@ export const adminApi = {
   updateSetting: (key: string, value: Record<string, unknown>) => rpc<Record<string, unknown>>('admin_update_setting', { p_key: key, p_value: value }),
   categories: async () => {
     const [{ data: cats, error: e1 }, { data: subs, error: e2 }] = await Promise.all([
-      supabase.from('categories').select('*').order('sort_order'),
-      supabase.from('subcategories').select('*').order('sort_order'),
+      client.from('categories').select('*').order('sort_order'),
+      client.from('subcategories').select('*').order('sort_order'),
     ]);
     if (e1 || e2) throw new Error(friendly((e1 ?? e2)!.message));
     return { categories: cats as AdminCategory[], subcategories: subs as AdminSubcategory[] };
   },
   saveCategory: async (c: Partial<AdminCategory>) => {
-    const { error } = await supabase.from('categories').upsert(c);
+    const { error } = await client.from('categories').upsert(c);
     if (error) throw new Error(friendly(error.message));
   },
   saveSubcategory: async (s: Partial<AdminSubcategory>) => {
-    const { error } = await supabase.from('subcategories').upsert(s);
+    const { error } = await client.from('subcategories').upsert(s);
     if (error) throw new Error(friendly(error.message));
   },
-  uploadProductMedia: async (file: File) => {
-    const path = `${Date.now()}-${file.name.replace(/[^a-z0-9.]+/gi, '-').toLowerCase()}`;
-    const { error } = await supabase.storage.from('product-media').upload(path, file, { cacheControl: '31536000' });
-    if (error) throw new Error(friendly(error.message));
-    return supabase.storage.from('product-media').getPublicUrl(path).data.publicUrl;
-  },
+  uploadProductMedia: (file: File) => upload(file, 'product'),
   newsletter: async () => {
-    const { data, error } = await supabase.from('newsletter_subscribers').select('*').order('created_at', { ascending: false }).limit(200);
+    const { data, error } = await client.from('newsletter_subscribers').select('*').order('created_at', { ascending: false }).limit(200);
     if (error) throw new Error(friendly(error.message));
     return data as { id: string; email: string; source: string | null; created_at: string }[];
   },

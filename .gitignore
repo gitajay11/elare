@@ -8,3 +8,5 @@ dist
 supabase/.temp
 *.tsbuildinfo
 .vercel
+dist-functions
+.neon

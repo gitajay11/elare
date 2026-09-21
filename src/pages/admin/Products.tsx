@@ -6,7 +6,7 @@ import { adminApi, type AdminProductPayload, type AdminProductSave } from '@/lib
 import { money, formatDate } from '@/lib/format';
 import { cn, slugify } from '@/lib/utils';
 import { toast } from '@/store/ui';
-import { STORE_URL } from '@/lib/supabase';
+import { STORE_URL } from '@/lib/neon';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea, Select, Toggle } from '@/components/ui/Field';
 import { Badge, Skeleton, Swatch } from '@/components/ui/Primitives';

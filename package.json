@@ -12,11 +12,14 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "db:test": "node scripts/db-test.mjs",
-    "dev:local": "node scripts/dev-local.mjs",
-    "api:local": "node scripts/dev-local.mjs --api-only"
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "functions:build": "node scripts/build-function.mjs",
+    "functions:dev": "node scripts/dev-function.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.58.0",
+    "@neon/config": "^1.7.2",
+    "@neon/env": "^1.4.3",
+    "@neondatabase/neon-js": "^0.7.0-beta",
     "@tanstack/react-query": "^5.90.0",
     "framer-motion": "^12.23.0",
     "lucide-react": "^0.544.0",
@@ -26,12 +29,21 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@aws-sdk/client-s3": "^3.1136.0",
     "@electric-sql/pglite": "^0.3.8",
+    "@hono/node-server": "^2.1.1",
+    "@neon/config-runtime": "^1.6.2",
+    "@neon/functions": "^0.11.0",
     "@tailwindcss/vite": "^4.1.13",
     "@types/node": "^24.5.0",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "esbuild": "^0.28.2",
+    "hono": "^4.13.8",
+    "jose": "^6.2.12",
+    "pg": "^8.23.0",
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.0",
     "vite": "^7.1.0"

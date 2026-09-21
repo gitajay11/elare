@@ -1,10 +1,11 @@
 -- ============================================================================
--- ÉLARÉ BEAUTY — core schema
+-- ÉLARÉ BEAUTY — core schema (Neon / Lakebase Postgres)
 -- Normalised catalogue, commerce, loyalty and moderation tables.
 -- All money is stored as numeric(12,2) in INR. All ids are uuid.
+-- Identity comes from Neon Managed Better Auth (schema neon_auth); the Data API
+-- exposes auth.uid() (uuid) and auth.jwt() from the request JWT.
 -- ============================================================================
 
-create extension if not exists pgcrypto;
 create extension if not exists pg_trgm;
 
 -- ---------------------------------------------------------------------------
@@ -29,10 +30,12 @@ create type recommendation_kind as enum ('also_like', 'complete_look', 'bundle')
 create type inventory_reason as enum ('initial', 'restock', 'sale', 'cancel', 'adjustment', 'gift', 'return');
 
 -- ---------------------------------------------------------------------------
--- Profiles (1:1 with auth.users). Role lives here; RLS reads it via is_admin().
+-- Profiles (1:1 with neon_auth."user", same uuid). Rows are created lazily by
+-- ensure_profile() / require_user(); Neon owns the auth schema so we add no FK or
+-- trigger there. Role lives here; RLS reads it via is_admin().
 -- ---------------------------------------------------------------------------
 create table profiles (
-  id          uuid primary key references auth.users(id) on delete cascade,
+  id          uuid primary key,
   email       text not null,
   full_name   text,
   phone       text,
@@ -474,28 +477,6 @@ create trigger orders_updated    before update on orders    for each row execute
 create trigger reviews_updated   before update on reviews   for each row execute function set_updated_at();
 create trigger payments_updated  before update on payments  for each row execute function set_updated_at();
 create trigger inventory_updated before update on inventory for each row execute function set_updated_at();
-
--- Every auth signup gets a profile, a loyalty account, a wishlist and a cart.
-create or replace function handle_new_user() returns trigger
-language plpgsql security definer set search_path = public as $$
-begin
-  insert into profiles (id, email, full_name, phone)
-  values (
-    new.id,
-    coalesce(new.email, ''),
-    coalesce(new.raw_user_meta_data ->> 'full_name', ''),
-    new.raw_user_meta_data ->> 'phone'
-  )
-  on conflict (id) do nothing;
-  insert into loyalty_accounts (user_id) values (new.id) on conflict do nothing;
-  insert into wishlists (user_id) values (new.id) on conflict do nothing;
-  insert into carts (user_id) values (new.id) on conflict do nothing;
-  return new;
-end $$;
-
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function handle_new_user();
 
 -- Every order status change is journaled automatically (single source of truth stays orders.status).
 create or replace function log_order_status() returns trigger

@@ -176,10 +176,11 @@ export function Addresses() {
 
 /* Profile ----------------------------------------------------------------- */
 export function Profile() {
-  const { user, profile, refreshProfile, updatePassword } = useAuth();
+  const { user, profile, refreshProfile, changePassword } = useAuth();
   const [sp] = useSearchParams();
   const [form, setForm] = useState({ full_name: profile?.full_name ?? '', phone: profile?.phone ?? '' });
   const [pwd, setPwd] = useState('');
+  const [currentPwd, setCurrentPwd] = useState('');
   const [busy, setBusy] = useState(false);
   useEffect(() => setForm({ full_name: profile?.full_name ?? '', phone: profile?.phone ?? '' }), [profile]);
   const saveProfile = async (e: React.FormEvent) => {
@@ -192,7 +193,7 @@ export function Profile() {
   const savePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    try { await updatePassword(pwd); setPwd(''); toast({ title: 'Password updated' }); }
+    try { await changePassword(currentPwd, pwd); setPwd(''); setCurrentPwd(''); toast({ title: 'Password updated' }); }
     catch (err) { toast({ title: 'Could not update password', description: (err as Error).message, variant: 'error' }); }
     finally { setBusy(false); }
   };
@@ -208,6 +209,7 @@ export function Profile() {
       </form>
       <form onSubmit={savePassword} className={cn('space-y-4 rounded-2xl border bg-white p-5', sp.get('reset') ? 'border-rose' : 'border-line')}>
         <h3 className="text-xl">{sp.get('reset') ? 'Set a new password' : 'Password'}</h3>
+        <Input label="Current password" type="password" autoComplete="current-password" required value={currentPwd} onChange={(e) => setCurrentPwd(e.target.value)} />
         <Input label="New password" type="password" autoComplete="new-password" minLength={8} required value={pwd} onChange={(e) => setPwd(e.target.value)} hint="At least 8 characters." />
         <Button type="submit" variant="outline" loading={busy}>Update password</Button>
       </form>

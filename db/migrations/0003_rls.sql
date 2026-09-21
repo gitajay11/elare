@@ -1,8 +1,10 @@
 -- ============================================================================
--- ÉLARÉ BEAUTY — Row Level Security
--- Customers see published catalogue + their own data. Admins (profiles.role)
--- manage everything. Money/stock/points tables have NO direct write policies:
--- they change only through the SECURITY DEFINER functions in 0002.
+-- ÉLARÉ BEAUTY — Row Level Security (Neon Data API)
+-- The Data API switches to the "anonymous" role for guest tokens and
+-- "authenticated" for signed-in users. Customers see the published catalogue +
+-- their own data. Admins (profiles.role) manage everything. Money/stock/points
+-- tables have NO direct write policies: they change only through the
+-- SECURITY DEFINER functions in 0002, which run as the database owner.
 -- ============================================================================
 
 alter table profiles                enable row level security;
@@ -35,10 +37,16 @@ alter table loyalty_transactions    enable row level security;
 alter table settings                enable row level security;
 alter table newsletter_subscribers  enable row level security;
 
-grant usage on schema public to anon, authenticated;
-grant select on product_stats to anon, authenticated;
+-- Enabling the Data API grants the authenticated role blanket access to public
+-- tables; replace that with the narrow grants below (RLS still applies on top).
+revoke all on all tables in schema public from authenticated, anonymous;
+revoke all on all sequences in schema public from authenticated, anonymous;
+alter default privileges in schema public revoke all on tables from authenticated, anonymous;
+
+grant usage on schema public to anonymous, authenticated;
+grant select on product_stats to anonymous, authenticated;
 grant select on categories, subcategories, products, product_shades, product_variants, product_images,
-  product_bundle_items, product_recommendations, coupons to anon, authenticated;
+  product_bundle_items, product_recommendations, coupons to anonymous, authenticated;
 grant select, insert, update, delete on profiles, addresses, carts, cart_items, wishlists, wishlist_items to authenticated;
 grant select on coupon_usage, orders, order_items, order_status_history, payments, free_gifts, reviews,
   loyalty_accounts, loyalty_transactions to authenticated;

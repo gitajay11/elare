@@ -6,7 +6,7 @@ import { adminApi, type InventoryRow } from '@/lib/api';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { toast } from '@/store/ui';
-import { STORE_URL } from '@/lib/supabase';
+import { STORE_URL } from '@/lib/neon';
 import { Button } from '@/components/ui/Button';
 import { Input, Select, Checkbox } from '@/components/ui/Field';
 import { Badge, Skeleton, Stars, Swatch } from '@/components/ui/Primitives';

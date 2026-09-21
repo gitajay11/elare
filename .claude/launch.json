@@ -2,13 +2,23 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "elare-local",
+      "name": "elare-store",
       "runtimeExecutable": "npm",
       "runtimeArgs": [
         "run",
-        "dev:local"
+        "dev"
       ],
       "port": 5173,
+      "autoPort": true
+    },
+    {
+      "name": "elare-admin",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:admin"
+      ],
+      "port": 5174,
       "autoPort": true
     }
   ]

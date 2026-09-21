@@ -27,13 +27,46 @@ begin
   end if;
 end $$;
 
+-- Creates the profile (+ loyalty account, wishlist, cart) for a Neon Auth user the
+-- first time we see them. Reads neon_auth."user" as the owner role; idempotent.
+create or replace function _ensure_profile(p_uid uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare v_email text; v_name text;
+begin
+  if p_uid is null then return; end if;
+  if exists (select 1 from profiles where id = p_uid) then return; end if;
+  select u.email, u.name into v_email, v_name from neon_auth."user" u where u.id = p_uid;
+  if v_email is null then
+    v_email := coalesce(auth.jwt() ->> 'email', '');
+    v_name  := coalesce(auth.jwt() ->> 'name', '');
+  end if;
+  insert into profiles (id, email, full_name) values (p_uid, coalesce(v_email, ''), nullif(v_name, ''))
+  on conflict (id) do nothing;
+  insert into loyalty_accounts (user_id) values (p_uid) on conflict do nothing;
+  insert into wishlists (user_id) values (p_uid) on conflict do nothing;
+  insert into carts (user_id) values (p_uid) on conflict do nothing;
+end $$;
+
+-- Called by the client right after sign-in / sign-up; returns the profile.
+create or replace function ensure_profile(p_full_name text default null, p_phone text default null) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare v_uid uuid := auth.uid();
+begin
+  if v_uid is null then raise exception 'authentication required' using errcode = '28000'; end if;
+  perform _ensure_profile(v_uid);
+  update profiles set full_name = coalesce(nullif(trim(p_full_name), ''), full_name), phone = coalesce(nullif(trim(p_phone), ''), phone)
+   where id = v_uid and (p_full_name is not null or p_phone is not null);
+  return (select jsonb_build_object('id', id, 'email', email, 'full_name', full_name, 'phone', phone, 'avatar_url', avatar_url, 'role', role, 'status', status) from profiles where id = v_uid);
+end $$;
+
 create or replace function require_user() returns uuid
-language plpgsql stable security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $$
 declare v_uid uuid := auth.uid();
 begin
   if v_uid is null then
     raise exception 'authentication required' using errcode = '28000';
   end if;
+  perform _ensure_profile(v_uid);
   if exists (select 1 from profiles where id = v_uid and status = 'suspended') then
     raise exception 'account suspended' using errcode = '42501';
   end if;
@@ -877,7 +910,7 @@ begin
                             'payment_method', v_method, 'status', v_order.status);
 end $$;
 
--- Called by the payment Edge Function (service role) after signature verification.
+-- Called by the API Function (owner connection) after Razorpay signature verification.
 create or replace function mark_order_paid(p_order_id uuid, p_provider_order_id text, p_provider_payment_id text, p_raw jsonb default null) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare v_o orders;
@@ -1758,13 +1791,13 @@ end $$;
 -- ---------------------------------------------------------------------------
 -- Grants. Internal helpers (prefixed _) are not callable from the API.
 -- ---------------------------------------------------------------------------
-revoke execute on all functions in schema public from public, anon, authenticated;
+revoke execute on all functions in schema public from public, anonymous, authenticated;
 
 grant execute on function is_admin(), get_store_config(), list_products(text, text, text, jsonb, text, int, int), search_suggest(text, int),
   get_product(text), get_home(), get_product_cards(uuid[]), quote_cart(jsonb, text, int), subscribe_newsletter(text, text)
-  to anon, authenticated;
+  to anonymous, authenticated;
 
-grant execute on function place_order(jsonb, jsonb, text, text, int, text), cancel_my_order(uuid, text), request_refund(uuid, text), get_order(uuid),
+grant execute on function ensure_profile(text, text), place_order(jsonb, jsonb, text, text, int, text), cancel_my_order(uuid, text), request_refund(uuid, text), get_order(uuid),
   list_my_orders(int, int), submit_review(uuid, int, text, text, text[]), list_my_reviews(), reviewable_products(), toggle_wishlist(uuid, uuid), get_wishlist(),
   redeem_wishlist_item(uuid, uuid, uuid), sync_cart(jsonb, boolean), get_my_dashboard(), get_my_loyalty(), list_my_coupons(),
   admin_dashboard(), admin_list_orders(text, text, int, int), admin_update_order(uuid, text, text, text, text, text), admin_list_customers(text, int, int),
@@ -1774,5 +1807,5 @@ grant execute on function place_order(jsonb, jsonb, text, text, int, text), canc
   admin_variant_options(), admin_update_setting(text, jsonb), admin_settings()
   to authenticated;
 
--- Only the service role (Edge Functions) may settle payments.
-revoke execute on function mark_order_paid(uuid, text, text, jsonb), mark_payment_failed(uuid, jsonb) from anon, authenticated;
+-- Payments are settled only by the API Function, which connects as the database owner.
+revoke execute on function mark_order_paid(uuid, text, text, jsonb), mark_payment_failed(uuid, jsonb) from anonymous, authenticated;

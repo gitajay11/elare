@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useState } from 'react';
 import { Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { pageTransition } from '@/lib/motion';
-import { isConfigured } from '@/lib/supabase';
+import { isConfigured } from '@/lib/neon';
 import { useCartSync } from '@/hooks/useStore';
 import { Navbar } from '@/components/layout/Navbar';
 import { MobileMenu } from '@/components/layout/MobileMenu';
@@ -66,7 +66,7 @@ function ConfigBanner() {
   if (isConfigured) return null;
   return (
     <div className="bg-ink px-4 py-2 text-center text-[12.5px] text-white">
-      Supabase is not configured — copy <code className="rounded bg-white/10 px-1">.env.example</code> to <code className="rounded bg-white/10 px-1">.env</code>, add your project URL and anon key, and run the migrations in <code className="rounded bg-white/10 px-1">supabase/migrations</code>.
+      Neon is not configured — copy <code className="rounded bg-white/10 px-1">.env.example</code> to <code className="rounded bg-white/10 px-1">.env</code>, set <code className="rounded bg-white/10 px-1">VITE_NEON_URL</code>, and run <code className="rounded bg-white/10 px-1">npm run db:migrate</code>.
     </div>
   );
 }

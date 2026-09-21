@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Seo, organizationSchema } from '@/lib/seo';
-import { SITE_URL } from '@/lib/supabase';
+import { SITE_URL } from '@/lib/neon';
 import { useRecent } from '@/store/recent';
 import { Hero } from '@/components/home/Hero';
 import { SignatureCollection, RailSection, ShopByCategory, Editorial, BoughtTogether, ReviewsSection, LoyaltySection, RecentlyViewed } from '@/components/home/Sections';

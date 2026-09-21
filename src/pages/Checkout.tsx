@@ -25,6 +25,8 @@ const STEPS: { key: Step; label: string; icon: React.ReactNode }[] = [
   { key: 'payment', label: 'Payment', icon: <CreditCard size={14} /> },
 ];
 const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID;
+/** sessionStorage key: order id whose confirmation page should empty the bag. */
+export const CLEAR_CART_FLAG = 'elare:clear-cart-for';
 const INDIAN_STATES = ['Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Delhi', 'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jammu & Kashmir', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Chandigarh', 'Puducherry', 'Ladakh'];
 
 const emptyAddress = { full_name: '', phone: '', email: '', line1: '', line2: '', city: '', state: '', postal_code: '' };
@@ -44,7 +46,6 @@ function CheckoutFlow({ userId, userEmail, userName, userPhone }: { userId: stri
   const items = useCart((s) => s.items);
   const coupon = useCart((s) => s.coupon);
   const redeemPoints = useCart((s) => s.redeemPoints);
-  const clearCart = useCart((s) => s.clear);
   const { quote, loading: quoting } = useQuote();
   const lines = useDisplayLines(quote, items);
   const [step, setStep] = useState<Step>('address');
@@ -101,13 +102,11 @@ function CheckoutFlow({ userId, userEmail, userName, userPhone }: { userId: stri
   };
 
   const finish = (orderId: string) => {
-    // Navigate first: emptying the bag while still on /checkout would trip the
-    // "empty bag → /cart" guard before the confirmation route mounts.
+    // The confirmation page empties the bag (one-shot flag): clearing it here would
+    // re-render this route with no items and bounce to /cart before the navigation
+    // transition commits.
+    sessionStorage.setItem(CLEAR_CART_FLAG, orderId);
     navigate(`/order/${orderId}/confirmation`, { replace: true });
-    setTimeout(() => {
-      clearCart();
-      qc.invalidateQueries({ queryKey: ['quote'] });
-    }, 0);
   };
 
   const payWithRazorpay = async (orderId: string, orderNumber: string) => {

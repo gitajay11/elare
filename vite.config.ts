@@ -17,10 +17,10 @@ export default defineConfig({
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
           motion: ['framer-motion'],
-          supabase: ['@supabase/supabase-js', '@tanstack/react-query'],
+          neon: ['@neondatabase/neon-js', '@tanstack/react-query'],
         },
       },
     },
   },
-  server: { port: 5173 },
+  server: { port: Number(process.env.PORT) || 5173 },
 });

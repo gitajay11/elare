@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Seo } from '@/lib/seo';
 import { useAuth } from '@/store/auth';
 import { toast } from '@/store/ui';
-import { supabase, APP } from '@/lib/supabase';
+import { client, APP } from '@/lib/neon';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
 import { Logo } from '@/components/layout/Navbar';
@@ -58,7 +58,7 @@ export default function Auth({ adminMode = false }: { adminMode?: boolean }) {
       <Seo title={mode === 'signup' ? 'Create account' : 'Sign in'} noindex />
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="mx-auto w-full max-w-md rounded-[28px] border border-line bg-white p-7 shadow-soft sm:p-9">
         <div className="mb-6 flex justify-center"><Logo /></div>
-        {!configured && <p className="mb-4 rounded-xl bg-danger/10 px-4 py-3 text-[13px] text-danger">Supabase isn’t configured yet — copy <code>.env.example</code> to <code>.env</code> and add your project keys.</p>}
+        {!configured && <p className="mb-4 rounded-xl bg-danger/10 px-4 py-3 text-[13px] text-danger">Neon isn’t configured yet — copy <code>.env.example</code> to <code>.env</code> and set <code>VITE_NEON_URL</code>.</p>}
         {adminMode && mode !== 'reset' && <><h1 className="text-center text-3xl">Team sign in</h1><p className="mb-6 mt-1 text-center text-[13px] text-mist">Admin access is granted by an existing administrator.</p></>}
         {mode !== 'reset' && !adminMode && (
           <Tabs tabs={[{ value: 'signin', label: 'Sign in' }, { value: 'signup', label: 'Create account' }]} value={mode as 'signin' | 'signup'} onChange={(v) => setMode(v)} className="mb-6 justify-center" />
@@ -88,20 +88,62 @@ export default function Auth({ adminMode = false }: { adminMode?: boolean }) {
   );
 }
 
-/** Handles the email confirmation / password recovery redirect from Supabase. */
+/**
+ * Landing page for Neon Auth emails. A password-reset link arrives as
+ * /auth/callback?reset=1&token=…; email-verification links simply return here
+ * with a live session.
+ */
 export function AuthCallback() {
   const [sp] = useSearchParams();
   const navigate = useNavigate();
+  const { completePasswordReset } = useAuth();
+  const token = sp.get('token');
+  const isReset = !!token || sp.get('reset') === '1';
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState('Signing you in…');
+
   useEffect(() => {
+    if (isReset) return;
     const next = sp.get('next') || (APP === 'admin' ? '/' : '/account');
-    const { data } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') navigate(APP === 'admin' ? '/' : '/account/profile?reset=1', { replace: true });
-      else if (event === 'SIGNED_IN') navigate(next, { replace: true });
+    client.auth.getSession().then(({ data }) => {
+      if (data.session) navigate(next, { replace: true });
+      else setStatus('Waiting for confirmation…');
     });
-    supabase.auth.getSession().then(({ data: s }) => { if (s.session) navigate(next, { replace: true }); else setStatus('Waiting for confirmation…'); });
     const t = setTimeout(() => navigate(APP === 'admin' ? '/login' : '/auth', { replace: true }), 8000);
-    return () => { data.subscription.unsubscribe(); clearTimeout(t); };
-  }, [navigate, sp]);
-  return <div className="grid min-h-[60vh] place-items-center text-sm text-mist">{status}</div>;
+    return () => clearTimeout(t);
+  }, [navigate, sp, isReset]);
+
+  if (!isReset) return <div className="grid min-h-[60vh] place-items-center text-sm text-mist">{status}</div>;
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!token) { setError('This reset link is incomplete — request a new one.'); return; }
+    if (password.length < 8) { setError('Use at least 8 characters.'); return; }
+    setBusy(true);
+    setError(null);
+    try {
+      await completePasswordReset(token, password);
+      toast({ title: 'Password updated', description: 'Sign in with your new password.', variant: 'success' });
+      navigate(APP === 'admin' ? '/login' : '/auth', { replace: true });
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="container-x grid min-h-[70vh] items-center py-12">
+      <Seo title="Reset password" noindex />
+      <form onSubmit={submit} className="mx-auto w-full max-w-md space-y-4 rounded-[28px] border border-line bg-white p-8 shadow-soft">
+        <div className="mb-2 flex justify-center"><Logo /></div>
+        <h1 className="text-center text-3xl">Choose a new password</h1>
+        <Input label="New password" type="password" autoComplete="new-password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} hint="At least 8 characters." />
+        {error && <p className="rounded-xl bg-danger/10 px-4 py-3 text-[13px] text-danger" role="alert">{error}</p>}
+        <Button type="submit" variant="glow" size="lg" full loading={busy}>Save password</Button>
+      </form>
+    </div>
+  );
 }

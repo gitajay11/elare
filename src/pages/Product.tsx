@@ -6,7 +6,7 @@ import { Check, ChevronLeft, ChevronRight, Play, ShoppingBag, Tag, Truck, Rotate
 import { api } from '@/lib/api';
 import type { ProductDetail, Review } from '@/lib/types';
 import { Seo, breadcrumbSchema } from '@/lib/seo';
-import { SITE_URL } from '@/lib/supabase';
+import { SITE_URL } from '@/lib/neon';
 import { imageUrl, money, socialProof, formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { fadeUp, stagger, viewportOnce } from '@/lib/motion';

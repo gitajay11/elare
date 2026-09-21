@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { BarChart3, Boxes, Gift, LayoutDashboard, Menu, Package, Settings, ShoppingBag, Sparkles, Star, Tag, Tags, Users, X } from 'lucide-react';
 import { useAuth } from '@/store/auth';
-import { STORE_URL } from '@/lib/supabase';
+import { STORE_URL } from '@/lib/neon';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/layout/Navbar';
 import { PageLoader } from '@/components/ui/Spinner';
@@ -24,7 +24,7 @@ const LINKS = [
 ];
 
 export default function AdminLayout() {
-  const { user, loading, isAdmin, profile } = useAuth();
+  const { user, loading, isAdmin, profile, signOut } = useAuth();
   const location = useLocation();
   const [open, setOpen] = useState(false);
   if (loading) return <PageLoader />;
@@ -32,7 +32,15 @@ export default function AdminLayout() {
   if (!isAdmin) {
     return (
       <div className="container-x grid min-h-[60vh] place-items-center text-center">
-        <div><p className="eyebrow">Admin</p><h1 className="mt-2 text-3xl">This area is for the Élaré team.</h1><p className="mt-2 text-sm text-ink-soft">Signed in as {user.email}. Ask an administrator to grant you access.</p></div>
+        <div>
+          <p className="eyebrow">Admin</p>
+          <h1 className="mt-2 text-3xl">This area is for the Élaré team.</h1>
+          <p className="mt-2 text-sm text-ink-soft">Signed in as {user.email}. Ask an administrator to grant you access.</p>
+          <div className="mt-6 flex justify-center gap-3">
+            <a href={STORE_URL} className="rounded-full border border-line px-5 py-2.5 text-sm font-semibold hover:border-rose hover:text-rose">Back to store</a>
+            <button type="button" onClick={() => signOut()} className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white">Sign out</button>
+          </div>
+        </div>
       </div>
     );
   }
