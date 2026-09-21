@@ -14,7 +14,7 @@ export default function Auth({ initialMode = 'signin' }: { initialMode?: 'signin
   const [sp] = useSearchParams();
   const { user, loading, signIn, signUp, resetPassword, configured } = useAuth();
   const navigate = useNavigate();
-  const next = sp.get('next') || '/account';
+  const next = sp.get('next') || '/';
   const [mode, setModeState] = useState<Mode>(initialMode);
   const search = sp.get('next') ? `?next=${encodeURIComponent(sp.get('next')!)}` : '';
   const setMode = (m: Mode) => {
@@ -115,7 +115,7 @@ export function AuthCallback() {
 
   useEffect(() => {
     if (isReset) return;
-    const next = sp.get('next') || '/account';
+    const next = sp.get('next') || '/';
     client.auth.getSession().then(({ data }) => {
       if (data.session) navigate(next, { replace: true });
       else setStatus('Waiting for confirmation…');
