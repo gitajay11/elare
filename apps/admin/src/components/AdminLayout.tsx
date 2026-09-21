@@ -57,25 +57,29 @@ export default function AdminLayout() {
     <div className="min-h-screen bg-ivory lg:grid lg:grid-cols-[240px_1fr]">
       <Seo title="Admin" noindex />
       <aside className="hidden border-r border-line bg-white p-5 lg:sticky lg:top-0 lg:block lg:h-screen lg:overflow-y-auto">
-        <Logo />
+        <div className="flex items-start justify-between gap-2">
+          <Logo />
+          <InstallButton appName="Élaré Admin" variant="icon" className="-mr-2 -mt-1" />
+        </div>
         <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-mist">Admin</p>
         <div className="mt-6">{nav}</div>
         <p className="mt-8 truncate text-[12px] text-mist">{profile?.full_name || user.email}</p>
         <a href={STORE_URL} className="mt-1 block text-[12px] font-semibold text-rose">← Back to store</a>
         <div className="mt-4 flex flex-wrap gap-2">
-          <InstallButton appName="Élaré Admin" variant="button" />
           <button type="button" onClick={logout} className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-[12.5px] font-semibold hover:border-rose hover:text-rose"><LogOut size={14} /> Sign out</button>
         </div>
       </aside>
       <div className="min-w-0">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-white/90 px-4 backdrop-blur lg:hidden">
           <Logo />
-          <button type="button" aria-label="Menu" onClick={() => setOpen((o) => !o)} className="grid h-10 w-10 place-items-center rounded-full hover:bg-blush/60">{open ? <X size={20} /> : <Menu size={20} />}</button>
+          <div className="flex items-center gap-1">
+            <InstallButton appName="Élaré Admin" variant="icon" />
+            <button type="button" aria-label="Menu" onClick={() => setOpen((o) => !o)} className="grid h-10 w-10 place-items-center rounded-full hover:bg-blush/60">{open ? <X size={20} /> : <Menu size={20} />}</button>
+          </div>
         </header>
         {open && (
           <div className="border-b border-line bg-white p-4 lg:hidden">
             {nav}
-            <InstallButton appName="Élaré Admin" variant="button" className="mr-2 mt-3" />
             <button type="button" onClick={logout} className="mt-3 inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-[12.5px] font-semibold"><LogOut size={14} /> Sign out</button>
           </div>
         )}
