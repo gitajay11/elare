@@ -11,3 +11,7 @@ supabase/.temp
 dist-functions
 .neon
 .turbo
+
+# Neon CLI assistant docs (regenerate with `neon skills -y`)
+.claude/skills
+skills-lock.json

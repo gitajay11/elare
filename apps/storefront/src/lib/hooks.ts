@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { DEFAULT_STORE_CONFIG } from '@elare/config';
 import { api } from '@/lib/api';
 import { type ProductCard, type Quote, type StoreConfig, type Variant } from '@elare/types';
 import { useAuth } from '@elare/ui';
@@ -7,21 +8,11 @@ import { toInputs, useCart, type CartSnapshot } from '@/features/cart/store';
 import { useUi, toast } from '@/lib/ui-store';
 import { useWishlist } from '@/features/wishlist/store';
 
-const FALLBACK_CONFIG: StoreConfig = {
-  currency: 'INR',
-  max_qty_per_line: 10,
-  shipping: { flat_rate: 79, free_above: 999 },
-  tax: { rate_percent: 0, inclusive: true },
-  loyalty: { points_per_rupee: 0.1, point_value_rupees: 0.25, min_redeem_points: 200, max_redeem_percent: 30, redemption_enabled: true, wishlist_redemption_enabled: true },
-  social_proof: { enabled: true, window_days: 30, min_count: 5 },
-  gift_rule: null,
-  categories: [],
-};
 
 /** Public store settings + category tree. Cached for the session. */
 export function useStoreConfig() {
   const q = useQuery({ queryKey: ['store-config'], queryFn: api.storeConfig, staleTime: 5 * 60_000 });
-  return { config: q.data ?? FALLBACK_CONFIG, loading: q.isLoading, error: q.error };
+  return { config: q.data ?? (DEFAULT_STORE_CONFIG as StoreConfig), loading: q.isLoading, error: q.error };
 }
 
 /** Server-priced cart. Re-quotes whenever items, coupon, points or the signed-in user change. */

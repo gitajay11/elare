@@ -12,7 +12,6 @@ export const formatDate = (iso: string | null | undefined, opts: Intl.DateTimeFo
 export const formatDateTime = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '';
 
-export const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
 
 /**
  * Social-proof copy is derived only from real order/review data and only shown

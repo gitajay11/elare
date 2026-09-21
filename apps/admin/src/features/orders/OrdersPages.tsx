@@ -3,17 +3,13 @@ import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api';
 import { type OrderStatus } from '@elare/types';
+import { ORDER_STATUSES, ORDER_TRANSITIONS } from '@elare/config';
 import { money, formatDate, formatDateTime, ORDER_STATUS_LABEL, PAYMENT_LABEL, METHOD_LABEL, imageUrl } from '@elare/utils';
 import { toast, Button, Input, Skeleton, StatusPill, Swatch, OrderTimeline } from '@elare/ui';
 import { AdminHeader, Pager, Table } from '@/components/AdminLayout';
 import NotFound from '@/pages/NotFoundPage';
 
-const STATUSES: OrderStatus[] = ['pending', 'confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled', 'refund_requested', 'refund_initiated', 'refund_processing', 'refunded'];
-const NEXT: Record<OrderStatus, OrderStatus[]> = {
-  pending: ['confirmed', 'cancelled'], confirmed: ['processing', 'cancelled'], processing: ['packed', 'cancelled'], packed: ['shipped', 'cancelled'],
-  shipped: ['out_for_delivery', 'delivered'], out_for_delivery: ['delivered'], delivered: ['refund_requested'], refund_requested: ['refund_initiated', 'delivered'],
-  refund_initiated: ['refund_processing', 'refunded'], refund_processing: ['refunded'], cancelled: [], refunded: [],
-};
+const STATUSES = ORDER_STATUSES;
 
 export function AdminOrders() {
   const [status, setStatus] = useState('');
@@ -68,7 +64,7 @@ export function AdminOrderDetail() {
   });
   if (isLoading) return <Skeleton className="h-96" />;
   if (!order) return <NotFound />;
-  const next = NEXT[order.status as OrderStatus] ?? [];
+  const next = ORDER_TRANSITIONS[order.status as OrderStatus] ?? [];
   return (
     <div>
       <AdminHeader title={order.order_number} description={`${formatDateTime(order.placed_at)} · ${METHOD_LABEL[order.payment_method]} · ${PAYMENT_LABEL[order.payment_status]}`} action={<Button variant="ghost" to="/orders">Back to orders</Button>} />

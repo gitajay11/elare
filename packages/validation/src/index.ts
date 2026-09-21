@@ -9,18 +9,10 @@ const email = z.string().trim().toLowerCase().email('Enter a valid email');
 // ---------------------------------------------------------------------------
 // Auth / profile
 // ---------------------------------------------------------------------------
-export const signInSchema = z.object({ email, password: z.string().min(1, 'Enter your password') });
-export const signUpSchema = z.object({
-  fullName: z.string().trim().min(2, 'Please enter your name').max(80),
-  email,
-  phone: z.string().trim().optional().transform((v) => (v ? v : undefined)).pipe(phone.optional()),
-  password: z.string().min(8, 'Use at least 8 characters for your password').max(128),
-});
 export const profileUpdateSchema = z.object({
   full_name: z.string().trim().min(2).max(80).optional(),
   phone: phone.optional(),
 });
-export const changePasswordSchema = z.object({ currentPassword: z.string().min(1), newPassword: z.string().min(8).max(128) });
 export const newsletterSchema = z.object({ email, source: z.string().max(40).optional() });
 
 // ---------------------------------------------------------------------------

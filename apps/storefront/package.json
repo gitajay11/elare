@@ -14,7 +14,6 @@
     "@elare/types": "workspace:*",
     "@elare/ui": "workspace:*",
     "@elare/utils": "workspace:*",
-    "@elare/validation": "workspace:*",
     "@neondatabase/neon-js": "^0.7.0-beta",
     "@tanstack/react-query": "^5.90.0",
     "framer-motion": "^12.23.0",

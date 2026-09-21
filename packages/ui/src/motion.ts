@@ -33,11 +33,6 @@ export const stagger = (staggerChildren = 0.08, delayChildren = 0): Variants => 
 
 export const viewportOnce = { once: true, margin: '-10% 0px -10% 0px' } as const;
 
-export const pageTransition = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE } },
-  exit: { opacity: 0, y: -6, transition: { duration: 0.25, ease: EASE } },
-};
 
 export const drawer = {
   initial: { x: '100%' },
