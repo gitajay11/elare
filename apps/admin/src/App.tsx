@@ -37,7 +37,8 @@ export default function AdminApp() {
       <ScrollToTop />
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/login" element={<Auth />} />
+          <Route path="/signin" element={<Auth />} />
+          <Route path="/login" element={<Navigate to="/signin" replace />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />

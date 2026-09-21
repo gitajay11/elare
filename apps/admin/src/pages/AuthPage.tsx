@@ -81,7 +81,7 @@ export function AuthCallback() {
 
   useEffect(() => {
     if (isReset) return;
-    client.auth.getSession().then(({ data }) => navigate(data.session ? sp.get('next') || '/' : '/login', { replace: true }));
+    client.auth.getSession().then(({ data }) => navigate(data.session ? sp.get('next') || '/' : '/signin', { replace: true }));
   }, [navigate, sp, isReset]);
 
   if (!isReset) return <PageLoader />;
@@ -95,7 +95,7 @@ export function AuthCallback() {
     try {
       await completePasswordReset(token, password);
       toast({ title: 'Password updated', description: 'Sign in with your new password.', variant: 'success' });
-      navigate('/login', { replace: true });
+      navigate('/signin', { replace: true });
     } catch (err) {
       setError((err as Error).message);
     } finally {

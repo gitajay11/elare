@@ -26,9 +26,9 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   // Leave the protected area first so the guard below does not add ?next.
-  const logout = async () => { navigate('/login', { replace: true }); await signOut(); };
+  const logout = async () => { navigate('/signin', { replace: true }); await signOut(); };
   if (loading) return <PageLoader />;
-  if (!user) return <Navigate to={location.pathname === '/' ? '/login' : `/login?next=${encodeURIComponent(location.pathname)}`} replace />;
+  if (!user) return <Navigate to={location.pathname === '/' ? '/signin' : `/signin?next=${encodeURIComponent(location.pathname)}`} replace />;
   if (!isAdmin) {
     return (
       <div className="container-x grid min-h-[60vh] place-items-center text-center">
