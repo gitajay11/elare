@@ -67,6 +67,8 @@ export function AuthProvider({ client, fetchProfile, resetRedirectTo, configured
   const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const profileFor = useRef<string | null>(null);
+  // While a sign-up is in flight the SDK emits SIGNED_IN then SIGNED_OUT; ignore both.
+  const signingUp = useRef(false);
 
   const loadProfile = useCallback(async (u: AuthUser | null, extra?: { fullName?: string; phone?: string }) => {
     if (!u) {
@@ -98,6 +100,7 @@ export function AuthProvider({ client, fetchProfile, resetRedirectTo, configured
       loadProfile(u).finally(() => mounted && setLoading(false));
     }).catch(() => mounted && setLoading(false));
     const { data: sub } = client.onAuthStateChange((_event, session) => {
+      if (signingUp.current) return;
       const u = toUser(session?.user);
       setUser((prev) => (prev?.id === u?.id ? prev : u));
       loadProfile(u);
@@ -121,14 +124,28 @@ export function AuthProvider({ client, fetchProfile, resetRedirectTo, configured
       setUser(u);
       await loadProfile(u);
     },
+    // Creates the account and its profile, then ends the session Neon Auth
+    // opened so the customer signs in explicitly.
     async signUp(email, password, fullName, phone) {
-      const { data, error } = await client.signUp({ email, password, options: { data: { name: fullName } } });
-      if (error) throw new Error(friendly(error.message, 'Sign up failed'));
-      if (!data.session) return { needsConfirmation: true };
-      const u = toUser(data.user);
-      setUser(u);
-      await loadProfile(u, { fullName, phone });
-      return { needsConfirmation: false };
+      signingUp.current = true;
+      try {
+        const { data, error } = await client.signUp({ email, password, options: { data: { name: fullName } } });
+        if (error) throw new Error(friendly(error.message, 'Sign up failed'));
+        if (!data.session) return { needsConfirmation: true };
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            await fetchProfile({ fullName, phone });
+            break;
+          } catch {
+            await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+          }
+        }
+        await client.signOut();
+        profileFor.current = null;
+        return { needsConfirmation: false };
+      } finally {
+        signingUp.current = false;
+      }
     },
     async signOut() {
       await client.signOut();
@@ -152,7 +169,7 @@ export function AuthProvider({ client, fetchProfile, resetRedirectTo, configured
       profileFor.current = null;
       await loadProfile(user);
     },
-  }), [user, profile, loading, configured, client, loadProfile, resetRedirectTo]);
+  }), [user, profile, loading, configured, client, loadProfile, fetchProfile, resetRedirectTo]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

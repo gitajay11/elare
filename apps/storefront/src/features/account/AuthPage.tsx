@@ -17,9 +17,10 @@ export default function Auth() {
   const [form, setForm] = useState({ email: '', password: '', name: '', phone: '' });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => setError(null), [mode]);
+  useEffect(() => { setError(null); if (mode !== 'signin') setNotice(null); }, [mode]);
   if (loading) return <PageLoader />;
   if (user) return <Navigate to={next} replace />;
 
@@ -36,7 +37,12 @@ export default function Auth() {
         if (form.password.length < 8) throw new Error('Use at least 8 characters for your password.');
         const r = await signUp(form.email, form.password, form.name.trim(), form.phone.trim());
         if (r.needsConfirmation) setMessage('Check your inbox — we’ve sent a link to confirm your email.');
-        else { toast({ title: 'Welcome to Élaré', variant: 'success' }); navigate(next, { replace: true }); }
+        else {
+          toast({ title: 'Welcome to Élaré', description: 'Your account is ready — sign in to continue.', variant: 'success' });
+          setForm((f) => ({ ...f, password: '' }));
+          setNotice('Your account is ready. Sign in with your email and password.');
+          setMode('signin');
+        }
       } else {
         await resetPassword(form.email);
         setMessage('If that email is registered, a reset link is on its way.');
@@ -62,6 +68,7 @@ export default function Auth() {
           <div className="rounded-xl bg-blush/50 px-4 py-4 text-center text-sm">{message}</div>
         ) : (
           <form onSubmit={submit} className="space-y-4">
+            {notice && <p className="rounded-xl bg-success/10 px-4 py-3 text-[13px] text-success" role="status">{notice}</p>}
             {mode === 'signup' && <Input label="Full name" autoComplete="name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />}
             <Input label="Email" type="email" autoComplete="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             {mode === 'signup' && <Input label="Mobile (optional)" autoComplete="tel" inputMode="numeric" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />}
