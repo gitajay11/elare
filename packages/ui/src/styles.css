@@ -36,6 +36,37 @@
 }
 
 /* ---------------------------------------------------------------------------
+   Dark theme — every token is remapped, so utilities need no dark: variants.
+   Activated by data-theme="dark" on <html> (see @elare/ui useTheme).
+   --------------------------------------------------------------------------- */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-ivory: #141012;
+  --color-white: #1d1719;
+  --color-blush: #3a2730;
+  --color-blush-deep: #4d3340;
+  --color-pink: #e8a7b8;
+  --color-pink-deep: #f0bccb;
+  --color-rose: #d98aa0;
+  --color-rose-deep: #eaaabb;
+  --color-champagne: #3d3324;
+  --color-champagne-deep: #c9ad7a;
+  --color-nude: #2a2225;
+  --color-nude-deep: #3b3136;
+  --color-ink: #f4edef;
+  --color-ink-soft: #c9bdc2;
+  --color-mist: #8e8287;
+  --color-line: #33292e;
+  --color-success: #6fbf94;
+  --color-danger: #ef8592;
+  --shadow-soft: 0 12px 34px -16px rgba(0, 0, 0, 0.6);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 18px 40px -24px rgba(0, 0, 0, 0.6);
+  --shadow-float: 0 24px 60px -24px rgba(0, 0, 0, 0.7);
+}
+:root[data-theme="dark"] ::selection { background: var(--color-rose); color: var(--color-ivory); }
+:root[data-theme="dark"] input[type="color"] { color-scheme: light; }
+
+/* ---------------------------------------------------------------------------
    Base
    --------------------------------------------------------------------------- */
 @layer base {
@@ -89,7 +120,7 @@
 }
 
 @utility glass {
-  background: rgba(255, 249, 250, 0.72);
+  background: color-mix(in srgb, var(--color-ivory) 72%, transparent);
   -webkit-backdrop-filter: blur(16px) saturate(140%);
   backdrop-filter: blur(16px) saturate(140%);
 }
@@ -163,14 +194,14 @@
 .btn-glow:disabled { opacity: 0.55; cursor: not-allowed; }
 
 /* Soft pink halo used for the selected shade */
-.shade-ring { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--color-pink), 0 0 18px 2px rgba(232, 167, 184, 0.55); }
+.shade-ring { box-shadow: 0 0 0 2px var(--color-white), 0 0 0 4px var(--color-pink), 0 0 18px 2px rgba(232, 167, 184, 0.55); }
 
 /* Editorial image reveal (used with framer initial/animate) */
 .img-reveal { clip-path: inset(0 0 0 0 round 24px); }
 
 /* Fine card border + hover lift */
 .card {
-  background: #fff;
+  background: var(--color-white);
   border: 1px solid var(--color-line);
   border-radius: 20px;
   box-shadow: var(--shadow-card);
@@ -186,10 +217,10 @@ input[type="range"].range {
   -webkit-appearance: none; appearance: none; width: 100%; height: 3px; background: var(--color-line); border-radius: 999px; outline: none;
 }
 input[type="range"].range::-webkit-slider-thumb {
-  -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 2px solid var(--color-rose); box-shadow: var(--shadow-soft); cursor: pointer;
+  -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--color-white); border: 2px solid var(--color-rose); box-shadow: var(--shadow-soft); cursor: pointer;
 }
 input[type="range"].range::-moz-range-thumb {
-  width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 2px solid var(--color-rose); cursor: pointer;
+  width: 18px; height: 18px; border-radius: 50%; background: var(--color-white); border: 2px solid var(--color-rose); cursor: pointer;
 }
 
 /* Skeleton shimmer */

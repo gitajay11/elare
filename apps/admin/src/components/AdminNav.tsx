@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   BarChart3, Boxes, ExternalLink, Gift, LayoutDashboard, LogOut, Package, Settings, ShoppingBag, Sparkles, Star, Tag, Tags, Users, X, type LucideIcon,
 } from 'lucide-react';
-import { InstallButton, Logo } from '@elare/ui';
+import { InstallButton, Logo, ThemeToggle } from '@elare/ui';
 import { cn } from '@elare/utils';
 import { adminApi } from '@/lib/api';
 import { STORE_URL } from '@/lib/neon';
@@ -103,6 +103,7 @@ function Footer({ name, email, onLogout }: { name: string; email: string; onLogo
           <p className="truncate text-[11.5px] text-mist">{email}</p>
         </div>
       </div>
+      <ThemeToggle className="mt-3 w-full" />
       <div className="mt-3 grid grid-cols-2 gap-2">
         <a href={STORE_URL} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-line text-[12.5px] font-semibold text-ink-soft transition-colors hover:border-rose hover:text-rose"><ExternalLink size={13} /> Store</a>
         <button type="button" onClick={onLogout} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-line text-[12.5px] font-semibold text-ink-soft transition-colors hover:border-danger hover:text-danger"><LogOut size={13} /> Sign out</button>

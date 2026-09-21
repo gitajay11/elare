@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Menu } from 'lucide-react';
-import { useAuth, PageLoader, Seo, Logo, InstallButton } from '@elare/ui';
+import { useAuth, PageLoader, Seo, Logo, InstallButton, ThemeCycleButton } from '@elare/ui';
 import { cn } from '@elare/utils';
 import { MobileNav, Sidebar } from './AdminNav';
 
@@ -35,7 +35,10 @@ export default function AdminLayout() {
             <button type="button" aria-label="Menu" onClick={() => setOpen(true)} className="grid h-10 w-10 place-items-center rounded-full hover:bg-blush/60"><Menu size={20} /></button>
             <Logo />
           </div>
-          <InstallButton appName="Élaré Admin" variant="icon" />
+          <div className="flex items-center">
+            <ThemeCycleButton />
+            <InstallButton appName="Élaré Admin" variant="icon" />
+          </div>
         </header>
         <main className="p-4 sm:p-6 lg:p-8"><Outlet /></main>
       </div>

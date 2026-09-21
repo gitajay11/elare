@@ -56,7 +56,7 @@ export function LineChart({ data, kind = 'money', height = 200 }: { data: Point[
         <path d={path} fill="none" stroke="#b85c78" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
         {data.map((d, i) => (i === 0 || i === data.length - 1 || i % Math.ceil(data.length / 6) === 0) && <text key={i} x={x(i)} y={H - 8} textAnchor="middle" fontSize="10" fill="#8a7f84">{d.label}</text>)}
         {hover !== null && (
-          <g><line x1={x(hover)} x2={x(hover)} y1={padT} y2={H - padB} stroke="#8a7f84" strokeWidth="1" strokeDasharray="3 3" /><circle cx={x(hover)} cy={y(data[hover].value)} r="5" fill="#b85c78" stroke="#fff" strokeWidth="2" /></g>
+          <g><line x1={x(hover)} x2={x(hover)} y1={padT} y2={H - padB} stroke="#8a7f84" strokeWidth="1" strokeDasharray="3 3" /><circle cx={x(hover)} cy={y(data[hover].value)} r="5" fill="#b85c78" stroke="var(--color-white)" strokeWidth="2" /></g>
         )}
       </svg>
       {hover !== null && (

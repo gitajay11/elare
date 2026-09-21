@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShieldAlert } from 'lucide-react';
-import { Seo, useAuth, Button, Input, PageLoader, Logo, Modal, toast } from '@elare/ui';
+import { Seo, useAuth, Button, Input, PageLoader, Logo, Modal, ThemeCycleButton, toast } from '@elare/ui';
 import { client, STORE_URL } from '@/lib/neon';
 
 type Mode = 'signin' | 'reset';
@@ -55,6 +55,7 @@ export default function Auth() {
   return (
     <div className="container-x grid min-h-screen items-center py-12">
       <Seo title="Team sign in" noindex />
+      <div className="fixed right-4 top-4 z-10"><ThemeCycleButton /></div>
       <Modal open={restricted} onClose={() => setRestricted(false)} size="sm" title={<span className="inline-flex items-center gap-2 text-danger"><ShieldAlert size={22} /> Restricted entry</span>}>
         <p className="text-sm text-ink-soft">This portal is for the Élaré team only. The account you signed in with does not have admin access, so it has been signed out.</p>
         <p className="mt-2 text-sm text-ink-soft">If you are a customer, please use the store. If you should have access, ask an administrator to grant it.</p>
