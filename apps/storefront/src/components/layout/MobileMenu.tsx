@@ -2,7 +2,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { SIGN_IN, CREATE_ACCOUNT } from '@/lib/routes';
 import { motion } from 'framer-motion';
 import { ChevronRight, Heart, LogOut, User } from 'lucide-react';
-import { useAuth, Drawer, stagger, fadeUp } from '@elare/ui';
+import { useAuth, Drawer, stagger, fadeUp, InstallButton } from '@elare/ui';
 import { ADMIN_URL } from '@/lib/neon';
 import { useUi } from '@/lib/ui-store';
 import { useStoreConfig } from '@/lib/hooks';
@@ -41,6 +41,7 @@ export function MobileMenu() {
       </div>
 
       <div className="mt-8 border-t border-line pt-6">
+        <InstallButton appName="Élaré Beauty" className="mb-4 border border-line" />
         {user ? (
           <div className="space-y-2">
             <p className="text-sm text-ink-soft">Signed in as <span className="font-semibold text-ink">{profile?.full_name || user.email}</span></p>

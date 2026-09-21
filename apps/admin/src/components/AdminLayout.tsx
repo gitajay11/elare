@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, Boxes, Gift, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingBag, Sparkles, Star, Tag, Tags, Users, X } from 'lucide-react';
-import { useAuth, PageLoader, Seo, Logo } from '@elare/ui';
+import { useAuth, PageLoader, Seo, Logo, InstallButton } from '@elare/ui';
 import { STORE_URL } from '@/lib/neon';
 import { cn } from '@elare/utils';
 
@@ -62,7 +62,10 @@ export default function AdminLayout() {
         <div className="mt-6">{nav}</div>
         <p className="mt-8 truncate text-[12px] text-mist">{profile?.full_name || user.email}</p>
         <a href={STORE_URL} className="mt-1 block text-[12px] font-semibold text-rose">← Back to store</a>
-        <button type="button" onClick={logout} className="mt-4 inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-[12.5px] font-semibold hover:border-rose hover:text-rose"><LogOut size={14} /> Sign out</button>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <InstallButton appName="Élaré Admin" variant="button" />
+          <button type="button" onClick={logout} className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-[12.5px] font-semibold hover:border-rose hover:text-rose"><LogOut size={14} /> Sign out</button>
+        </div>
       </aside>
       <div className="min-w-0">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-white/90 px-4 backdrop-blur lg:hidden">
@@ -72,6 +75,7 @@ export default function AdminLayout() {
         {open && (
           <div className="border-b border-line bg-white p-4 lg:hidden">
             {nav}
+            <InstallButton appName="Élaré Admin" variant="button" className="mr-2 mt-3" />
             <button type="button" onClick={logout} className="mt-3 inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-[12.5px] font-semibold"><LogOut size={14} /> Sign out</button>
           </div>
         )}

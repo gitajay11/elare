@@ -4,7 +4,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Menu, Search, ShoppingBag, User } from 'lucide-react';
 import { cn } from '@elare/utils';
-import { useAuth, IconButton } from '@elare/ui';
+import { useAuth, IconButton, InstallButton } from '@elare/ui';
 import { selectCount, useCart } from '@/features/cart/store';
 import { useUi } from '@/lib/ui-store';
 import { useWishlist } from '@/features/wishlist/store';
@@ -99,6 +99,7 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-1">
+          <InstallButton appName="Élaré Beauty" variant="icon" className="hidden xl:inline-grid" />
           <IconButton label="Search" onClick={() => setSearch(true)}><Search size={20} /></IconButton>
           <Link to={user ? '/account' : signInPath(location.pathname)} className="hidden h-10 w-10 place-items-center rounded-full transition-colors hover:bg-blush/70 lg:grid" aria-label={user ? 'Account' : 'Sign in'}>
             <User size={20} />
