@@ -1,24 +1,9 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, Boxes, Gift, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingBag, Sparkles, Star, Tag, Tags, Users, X } from 'lucide-react';
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Menu } from 'lucide-react';
 import { useAuth, PageLoader, Seo, Logo, InstallButton } from '@elare/ui';
-import { STORE_URL } from '@/lib/neon';
 import { cn } from '@elare/utils';
-
-const LINKS = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/products', label: 'Products', icon: Package },
-  { to: '/categories', label: 'Categories', icon: Tags },
-  { to: '/orders', label: 'Orders', icon: ShoppingBag },
-  { to: '/customers', label: 'Customers', icon: Users },
-  { to: '/coupons', label: 'Coupons', icon: Tag },
-  { to: '/loyalty', label: 'Loyalty', icon: Sparkles },
-  { to: '/gifts', label: 'Free gifts', icon: Gift },
-  { to: '/reviews', label: 'Reviews', icon: Star },
-  { to: '/inventory', label: 'Inventory', icon: Boxes },
-  { to: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { to: '/settings', label: 'Settings', icon: Settings },
-];
+import { MobileNav, Sidebar } from './AdminNav';
 
 function RestrictedRedirect({ signOut }: { signOut: () => Promise<void> }) {
   useEffect(() => { void signOut(); }, [signOut]);
@@ -38,45 +23,20 @@ export default function AdminLayout() {
   if (!profile) return <PageLoader />;
   // Not an active admin (e.g. a customer session shared from the store): end it and warn on the sign-in page.
   if (!isAdmin) return <RestrictedRedirect signOut={signOut} />;
-  const nav = (
-    <nav className="space-y-0.5" aria-label="Admin">
-      {LINKS.map((l) => (
-        <NavLink key={l.to} to={l.to} end={l.end} onClick={() => setOpen(false)} className={({ isActive }) => cn('flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition-colors', isActive ? 'bg-ink text-white' : 'text-ink-soft hover:bg-blush/60 hover:text-ink')}>
-          <l.icon size={16} /> {l.label}
-        </NavLink>
-      ))}
-    </nav>
-  );
+  const name = profile.full_name || user.email;
   return (
-    <div className="min-h-screen bg-ivory lg:grid lg:grid-cols-[240px_1fr]">
+    <div className="min-h-screen bg-ivory lg:grid lg:grid-cols-[256px_minmax(0,1fr)]">
       <Seo title="Admin" noindex />
-      <aside className="hidden border-r border-line bg-white p-5 lg:sticky lg:top-0 lg:block lg:h-screen lg:overflow-y-auto">
-        <div className="flex items-start justify-between gap-2">
-          <Logo />
-          <InstallButton appName="Élaré Admin" variant="icon" className="-mr-2 -mt-1" />
-        </div>
-        <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-mist">Admin</p>
-        <div className="mt-6">{nav}</div>
-        <p className="mt-8 truncate text-[12px] text-mist">{profile?.full_name || user.email}</p>
-        <a href={STORE_URL} className="mt-1 block text-[12px] font-semibold text-rose">← Back to store</a>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" onClick={logout} className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-[12.5px] font-semibold hover:border-rose hover:text-rose"><LogOut size={14} /> Sign out</button>
-        </div>
-      </aside>
+      <Sidebar name={name} email={user.email} onLogout={logout} />
+      <MobileNav open={open} onClose={() => setOpen(false)} name={name} email={user.email} onLogout={logout} />
       <div className="min-w-0">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-white/90 px-4 backdrop-blur lg:hidden">
-          <Logo />
-          <div className="flex items-center gap-1">
-            <InstallButton appName="Élaré Admin" variant="icon" />
-            <button type="button" aria-label="Menu" onClick={() => setOpen((o) => !o)} className="grid h-10 w-10 place-items-center rounded-full hover:bg-blush/60">{open ? <X size={20} /> : <Menu size={20} />}</button>
+          <div className="flex items-center gap-2">
+            <button type="button" aria-label="Menu" onClick={() => setOpen(true)} className="grid h-10 w-10 place-items-center rounded-full hover:bg-blush/60"><Menu size={20} /></button>
+            <Logo />
           </div>
+          <InstallButton appName="Élaré Admin" variant="icon" />
         </header>
-        {open && (
-          <div className="border-b border-line bg-white p-4 lg:hidden">
-            {nav}
-            <button type="button" onClick={logout} className="mt-3 inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-[12.5px] font-semibold"><LogOut size={14} /> Sign out</button>
-          </div>
-        )}
         <main className="p-4 sm:p-6 lg:p-8"><Outlet /></main>
       </div>
     </div>

@@ -137,8 +137,8 @@ export function AdminProductEditor() {
   return (
     <form onSubmit={submit}>
       <AdminHeader title={isNew ? 'New product' : product.name || 'Edit product'} description={isNew ? 'Create the product, its shades, variants and stock in one go.' : `/product/${product.slug}`} action={<div className="flex gap-2"><Button variant="ghost" to="/products">Back</Button>{!isNew && <Button variant="outline" href={`${STORE_URL}/product/${product.slug}`}>View</Button>}<Button type="submit" loading={save.isPending}>Save</Button></div>} />
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0 space-y-6">
           <Card title="Basics">
             <div className="grid gap-4 sm:grid-cols-2">
               <Input label="Name" required value={product.name} onChange={(e) => { setP('name', e.target.value); if (isNew) setP('slug', slugify(e.target.value)); }} />
@@ -159,15 +159,19 @@ export function AdminProductEditor() {
           <Card title="Shades" action={<Button size="sm" variant="soft" onClick={() => setShades((s) => [...s, { id: tmp(), name: '', hex: '#E8A7B8', undertone: null, description: null, is_active: true }])} icon={<Plus size={14} />}>Add shade</Button>}>
             {shades.length === 0 && <p className="text-sm text-mist">No shades — the product will be sold as a single item (or by option variants below).</p>}
             <div className="space-y-2">
-              {shades.map((s, i) => (
-                <div key={s.id} className="grid grid-cols-[auto_1fr_100px_120px_auto] items-center gap-2">
-                  <input type="color" value={s.hex} onChange={(e) => setShades((arr) => arr.map((x, j) => (j === i ? { ...x, hex: e.target.value.toUpperCase() } : x)))} className="h-10 w-10 cursor-pointer rounded-full border-0 bg-transparent" aria-label="Shade colour" />
-                  <input value={s.name} onChange={(e) => setShades((arr) => arr.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} placeholder="Shade name" className="h-10 rounded-xl border border-line px-3 text-sm" required />
-                  <input value={s.hex} onChange={(e) => setShades((arr) => arr.map((x, j) => (j === i ? { ...x, hex: e.target.value } : x)))} className="h-10 rounded-xl border border-line px-3 text-sm uppercase" pattern="#[0-9a-fA-F]{6}" />
-                  <select value={s.undertone ?? ''} onChange={(e) => setShades((arr) => arr.map((x, j) => (j === i ? { ...x, undertone: e.target.value || null } : x)))} className="h-10 rounded-xl border border-line bg-white px-2 text-sm"><option value="">Undertone</option><option>warm</option><option>cool</option><option>neutral</option></select>
-                  <button type="button" onClick={() => { setShades((arr) => arr.filter((_, j) => j !== i)); setVariants((v) => v.map((x) => (x.shade_id === s.id ? { ...x, shade_id: null } : x))); }} className="text-mist hover:text-danger" aria-label="Remove shade"><Trash2 size={15} /></button>
-                </div>
-              ))}
+              {shades.map((s, i) => {
+                const set = (patch: Partial<Shade>) => setShades((arr) => arr.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+                const valid = /^#[0-9a-fA-F]{6}$/.test(s.hex);
+                return (
+                  <div key={s.id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-line p-2 sm:grid-cols-[auto_minmax(0,1fr)_112px_130px_auto]">
+                    <ColourDot hex={valid ? s.hex : '#E8A7B8'} onChange={(hex) => set({ hex })} />
+                    <input value={s.name} onChange={(e) => set({ name: e.target.value })} placeholder="Shade name (e.g. 01 Rose Nude)" className="h-10 min-w-0 rounded-xl border border-line px-3 text-sm" required />
+                    <button type="button" onClick={() => { setShades((arr) => arr.filter((_, j) => j !== i)); setVariants((v) => v.map((x) => (x.shade_id === s.id ? { ...x, shade_id: null } : x))); }} className="grid h-9 w-9 place-items-center rounded-full text-mist hover:bg-danger/10 hover:text-danger sm:order-last" aria-label="Remove shade"><Trash2 size={15} /></button>
+                    <input value={s.hex} onChange={(e) => set({ hex: e.target.value.toUpperCase() })} className={cn('col-span-3 h-10 min-w-0 rounded-xl border px-3 font-mono text-[13px] uppercase sm:col-span-1', valid ? 'border-line' : 'border-danger')} pattern="#[0-9a-fA-F]{6}" placeholder="#RRGGBB" aria-label="Hex colour" />
+                    <select value={s.undertone ?? ''} onChange={(e) => set({ undertone: e.target.value || null })} className="col-span-3 h-10 min-w-0 rounded-xl border border-line bg-white px-2 text-sm sm:col-span-1"><option value="">Undertone</option><option value="warm">Warm</option><option value="cool">Cool</option><option value="neutral">Neutral</option></select>
+                  </div>
+                );
+              })}
             </div>
             {shades.length > 0 && variants.length === 0 && (
               <Button size="sm" variant="outline" className="mt-3" onClick={() => setVariants(shades.map((s, i) => ({ id: tmp(), shade_id: s.id, sku: `${slugify(product.name || 'sku').toUpperCase()}-${String(i + 1).padStart(2, '0')}`, name: s.name, options: {}, price_override: null, is_active: true, quantity: 0, low_stock_threshold: 5 })))}>Generate one variant per shade</Button>
@@ -177,27 +181,38 @@ export function AdminProductEditor() {
           <Card title="Variants & stock" action={<Button size="sm" variant="soft" icon={<Plus size={14} />} onClick={() => setVariants((v) => [...v, { id: tmp(), shade_id: null, sku: '', name: '', options: {}, price_override: null, is_active: true, quantity: 0, low_stock_threshold: 5 }])}>Add variant</Button>}>
             <p className="mb-3 text-[12.5px] text-mist">Inventory is tracked per variant. Stock changes made here are written to the inventory history.</p>
             <div className="space-y-3">
+              {variants.length === 0 && <p className="text-sm text-mist">No variants yet. Add one, or add shades above and generate a variant per shade.</p>}
               {variants.map((v, i) => {
                 const set = (patch: Partial<Variant>) => setVariants((arr) => arr.map((x, j) => (j === i ? { ...x, ...patch } : x)));
                 const opt = (k: string, val: string) => set({ options: Object.fromEntries(Object.entries({ ...v.options, [k]: k === 'waterproof' ? (val === '' ? undefined : val === 'true') : val || undefined }).filter(([, x]) => x !== undefined)) });
+                const shade = shades.find((sh) => sh.id === v.shade_id);
+                const low = v.quantity <= v.low_stock_threshold;
                 return (
-                  <div key={v.id} className="rounded-xl border border-line p-3">
-                    <div className="grid gap-2 sm:grid-cols-[1fr_1fr_140px_100px]">
-                      <input value={v.name} onChange={(e) => set({ name: e.target.value })} placeholder="Variant name" required className="h-10 rounded-xl border border-line px-3 text-sm" />
-                      <input value={v.sku} onChange={(e) => set({ sku: e.target.value.toUpperCase() })} placeholder="SKU" required className="h-10 rounded-xl border border-line px-3 text-sm" />
-                      <select value={v.shade_id ?? ''} onChange={(e) => set({ shade_id: e.target.value || null })} className="h-10 rounded-xl border border-line bg-white px-2 text-sm"><option value="">No shade</option>{shades.map((s) => <option key={s.id} value={s.id}>{s.name || '(unnamed)'}</option>)}</select>
-                      <input type="number" step="0.01" value={v.price_override ?? ''} onChange={(e) => set({ price_override: e.target.value ? Number(e.target.value) : null })} placeholder="Price ovr." className="h-10 rounded-xl border border-line px-3 text-sm" />
+                  <div key={v.id} className={cn('rounded-2xl border p-3 sm:p-4', v.is_active ? 'border-line bg-white' : 'border-dashed border-line bg-nude/40')}>
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        {shade && <span className="h-5 w-5 shrink-0 rounded-full border border-black/10" style={{ background: shade.hex }} />}
+                        <span className="truncate text-[13px] font-semibold">{v.name || `Variant ${i + 1}`}</span>
+                        {v.sku && <span className="rounded-full bg-nude px-2 py-0.5 font-mono text-[10.5px] text-ink-soft">{v.sku}</span>}
+                        <span className={cn('rounded-full px-2 py-0.5 text-[10.5px] font-semibold', v.quantity === 0 ? 'bg-danger/10 text-danger' : low ? 'bg-champagne text-ink' : 'bg-success/10 text-success')}>{v.quantity === 0 ? 'Out of stock' : low ? 'Low stock' : 'In stock'}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Toggle label={v.is_active ? 'Active' : 'Hidden'} checked={v.is_active} onChange={(x) => set({ is_active: x })} />
+                        <button type="button" onClick={() => setVariants((arr) => arr.filter((_, j) => j !== i))} className="grid h-9 w-9 place-items-center rounded-full text-mist hover:bg-danger/10 hover:text-danger" aria-label="Remove variant"><Trash2 size={15} /></button>
+                      </div>
                     </div>
-                    <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_120px_1fr_90px_90px_auto]">
-                      <input value={String(v.options.finish ?? '')} onChange={(e) => opt('finish', e.target.value)} placeholder="Finish" className="h-9 rounded-lg border border-line px-2 text-[13px]" />
-                      <input value={String(v.options.coverage ?? '')} onChange={(e) => opt('coverage', e.target.value)} placeholder="Coverage" className="h-9 rounded-lg border border-line px-2 text-[13px]" />
-                      <select value={v.options.waterproof === undefined ? '' : String(v.options.waterproof)} onChange={(e) => opt('waterproof', e.target.value)} className="h-9 rounded-lg border border-line bg-white px-2 text-[13px]"><option value="">Waterproof?</option><option value="true">Waterproof</option><option value="false">Non-waterproof</option></select>
-                      <input value={String(v.options.pack ?? v.options.size ?? '')} onChange={(e) => opt('pack', e.target.value)} placeholder="Pack / size" className="h-9 rounded-lg border border-line px-2 text-[13px]" />
-                      <input type="number" min={0} value={v.quantity} onChange={(e) => set({ quantity: Number(e.target.value) })} title="Stock" className="h-9 rounded-lg border border-line px-2 text-[13px]" />
-                      <input type="number" min={0} value={v.low_stock_threshold} onChange={(e) => set({ low_stock_threshold: Number(e.target.value) })} title="Low-stock threshold" className="h-9 rounded-lg border border-line px-2 text-[13px]" />
-                      <div className="flex items-center gap-2"><Toggle checked={v.is_active} onChange={(x) => set({ is_active: x })} /><button type="button" onClick={() => setVariants((arr) => arr.filter((_, j) => j !== i))} className="text-mist hover:text-danger" aria-label="Remove variant"><Trash2 size={15} /></button></div>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <Field label="Variant name"><input value={v.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. 01 Rose Nude" required className={field} /></Field>
+                      <Field label="SKU"><input value={v.sku} onChange={(e) => set({ sku: e.target.value.toUpperCase() })} placeholder="ELR-LIP-01" required className={cn(field, 'font-mono uppercase')} /></Field>
+                      <Field label="Shade"><select value={v.shade_id ?? ''} onChange={(e) => set({ shade_id: e.target.value || null })} className={cn(field, 'bg-white')}><option value="">No shade</option>{shades.map((sh) => <option key={sh.id} value={sh.id}>{sh.name || '(unnamed)'}</option>)}</select></Field>
+                      <Field label="Price override (₹)" hint="Blank = product price"><input type="number" step="0.01" min={0} value={v.price_override ?? ''} onChange={(e) => set({ price_override: e.target.value ? Number(e.target.value) : null })} placeholder={String(product.price || '')} className={field} /></Field>
+                      <Field label="Stock"><input type="number" min={0} value={v.quantity} onChange={(e) => set({ quantity: Number(e.target.value) })} className={field} /></Field>
+                      <Field label="Low-stock alert at"><input type="number" min={0} value={v.low_stock_threshold} onChange={(e) => set({ low_stock_threshold: Number(e.target.value) })} className={field} /></Field>
+                      <Field label="Finish"><input value={String(v.options.finish ?? '')} onChange={(e) => opt('finish', e.target.value)} placeholder="Satin, Matte…" className={field} /></Field>
+                      <Field label="Coverage"><input value={String(v.options.coverage ?? '')} onChange={(e) => opt('coverage', e.target.value)} placeholder="Light, Medium, Full" className={field} /></Field>
+                      <Field label="Waterproof"><select value={v.options.waterproof === undefined ? '' : String(v.options.waterproof)} onChange={(e) => opt('waterproof', e.target.value)} className={cn(field, 'bg-white')}><option value="">Not specified</option><option value="true">Waterproof</option><option value="false">Non-waterproof</option></select></Field>
+                      <Field label="Pack / size"><input value={String(v.options.pack ?? v.options.size ?? '')} onChange={(e) => opt('pack', e.target.value)} placeholder="3.5 g, Set of 3…" className={field} /></Field>
                     </div>
-                    <p className="mt-1 text-[11px] text-mist">Stock · low-stock threshold · active</p>
                   </div>
                 );
               })}
@@ -242,7 +257,7 @@ export function AdminProductEditor() {
           </Card>
         </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <Card title="Status">
             <div className="space-y-3">
               <Toggle label="Published" checked={product.is_published} onChange={(v) => setP('is_published', v)} />
@@ -265,13 +280,35 @@ export function AdminProductEditor() {
             </div>
           </Card>
           <Card title="Attributes (JSON)">
-            <textarea value={attrsText} onChange={(e) => setAttrsText(e.target.value)} rows={6} className="w-full rounded-xl border border-line px-3 py-2 font-mono text-[12px]" />
-            <p className="mt-1 text-[11.5px] text-mist">e.g. {'{"collection":"signature","product_type":"combo","waterproof":true,"points_redeemable":false}'}</p>
+            <textarea value={attrsText} onChange={(e) => setAttrsText(e.target.value)} rows={6} className="w-full min-w-0 rounded-xl border border-line px-3 py-2 font-mono text-[12px]" />
+            <p className="mt-1 break-all text-[11.5px] text-mist">Free-form facts shown as product details, e.g. <code className="rounded bg-nude px-1">{'{"collection":"signature","waterproof":true}'}</code></p>
           </Card>
           {shades.length > 0 && <Card title="Preview"><div className="flex flex-wrap gap-2">{shades.map((s) => <Swatch key={s.id} hex={/^#[0-9a-fA-F]{6}$/.test(s.hex) ? s.hex : '#ccc'} name={s.name} size={28} />)}</div></Card>}
         </div>
       </div>
     </form>
+  );
+}
+
+const field = 'h-10 w-full min-w-0 rounded-xl border border-line px-3 text-sm';
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <label className="block min-w-0">
+      <span className="mb-1 block text-[10.5px] font-semibold uppercase tracking-[0.14em] text-mist">{label}</span>
+      {children}
+      {hint && <span className="mt-1 block text-[11px] text-mist">{hint}</span>}
+    </label>
+  );
+}
+
+/** Round colour swatch that opens the native colour picker. */
+function ColourDot({ hex, onChange }: { hex: string; onChange: (hex: string) => void }) {
+  return (
+    <span className="relative inline-grid h-10 w-10 shrink-0 place-items-center">
+      <span className="h-9 w-9 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,.12),0_4px_10px_-4px_rgba(0,0,0,.35)] transition-transform hover:scale-105" style={{ background: hex }} aria-hidden="true" />
+      <input type="color" value={hex} onChange={(e) => onChange(e.target.value.toUpperCase())} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" aria-label="Pick shade colour" title="Pick colour" />
+    </span>
   );
 }
 
