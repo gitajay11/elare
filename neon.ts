@@ -1,7 +1,8 @@
 import { defineConfig } from "@neon/config/v1";
 
 // Élaré Beauty on Neon: Lakebase Postgres + Managed Better Auth + Data API
-// (PostgREST-compatible; the SDK derives auth URLs from it),
+// (kept enabled only for its `authenticated` / `anonymous` roles and auth.uid(),
+// which the API impersonates — no client calls it directly),
 // a public_read bucket for product/review media, and the API Function
 // (apps/api) that the storefront and admin sites call.
 //
