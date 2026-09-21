@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Download, WifiOff } from 'lucide-react';
 import { cn } from '@elare/utils';
 import { Modal } from './Overlay';
@@ -51,17 +51,17 @@ interface BeforeInstallPromptEvent extends Event {
 const isStandalone = () =>
   typeof window !== 'undefined' &&
   (window.matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true);
-const isIos = () => typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
 
 /**
  * Install state for the current browser. Chromium browsers fire
  * `beforeinstallprompt`, which we hold on to and trigger from our own button;
- * iOS Safari has no prompt API, so there we show the "Add to Home Screen" steps.
+ * everywhere else (iOS Safari, Firefox, or before Chrome decides to offer it)
+ * we fall back to instructions.
  */
 export function useInstallPrompt() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(isStandalone);
-  const [showIosHelp, setShowIosHelp] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     const onPrompt = (e: Event) => {
@@ -80,42 +80,71 @@ export function useInstallPrompt() {
     };
   }, []);
 
-  const ios = isIos();
-  const canInstall = !installed && (deferred !== null || ios);
   const install = async () => {
     if (deferred) {
       await deferred.prompt();
       const { outcome } = await deferred.userChoice;
       if (outcome === 'accepted') setDeferred(null);
-    } else if (ios) {
-      setShowIosHelp(true);
+    } else {
+      setShowHelp(true);
     }
   };
-  return { canInstall, installed, install, ios, showIosHelp, closeIosHelp: () => setShowIosHelp(false) };
+  return { installed, hasPrompt: deferred !== null, install, showHelp, closeHelp: () => setShowHelp(false) };
 }
 
-/** Step-by-step for iOS Safari, which has no install prompt. */
-export function IosInstallHelp({ open, onClose, appName }: { open: boolean; onClose: () => void; appName: string }) {
+type Platform = 'ios' | 'android' | 'desktop';
+const platform = (): Platform => {
+  if (typeof navigator === 'undefined') return 'desktop';
+  if (/iphone|ipad|ipod/i.test(navigator.userAgent)) return 'ios';
+  if (/android/i.test(navigator.userAgent)) return 'android';
+  return 'desktop';
+};
+
+/** How to install when the browser gives us no prompt to trigger. */
+export function InstallHelp({ open, onClose, appName }: { open: boolean; onClose: () => void; appName: string }) {
+  const os = platform();
+  const Step = ({ children }: { children: ReactNode }) => <li>{children}</li>;
+  const B = ({ children }: { children: ReactNode }) => <span className="font-semibold text-ink">{children}</span>;
   return (
-    <Modal open={open} onClose={onClose} title={`Add ${appName} to your Home Screen`} size="sm">
+    <Modal open={open} onClose={onClose} title={`Install ${appName}`} size="sm">
+      <p className="mb-3 text-sm text-ink-soft">Installed, {appName} opens from your home screen or desktop like any other app — no browser bars, faster loads.</p>
       <ol className="list-decimal space-y-2 pl-5 text-sm text-ink-soft">
-        <li>Tap the <span className="font-semibold text-ink">Share</span> button in Safari’s toolbar.</li>
-        <li>Choose <span className="font-semibold text-ink">Add to Home Screen</span>.</li>
-        <li>Tap <span className="font-semibold text-ink">Add</span>. {appName} opens like an app from then on.</li>
+        {os === 'ios' && (
+          <>
+            <Step>Open this page in <B>Safari</B> and tap the <B>Share</B> button.</Step>
+            <Step>Choose <B>Add to Home Screen</B>.</Step>
+            <Step>Tap <B>Add</B>.</Step>
+          </>
+        )}
+        {os === 'android' && (
+          <>
+            <Step>Tap the <B>⋮ menu</B> in Chrome (top right).</Step>
+            <Step>Choose <B>Install app</B> or <B>Add to Home screen</B>.</Step>
+            <Step>Confirm with <B>Install</B>.</Step>
+          </>
+        )}
+        {os === 'desktop' && (
+          <>
+            <Step>In <B>Chrome</B> or <B>Edge</B>, look for the <B>install icon</B> at the right end of the address bar.</Step>
+            <Step>Or open the browser menu and choose <B>Install {appName}</B> (Edge: <B>Apps → Install this site as an app</B>).</Step>
+            <Step>Confirm with <B>Install</B>.</Step>
+          </>
+        )}
       </ol>
     </Modal>
   );
 }
 
 /**
- * "Install app" control. Renders nothing when the app is already installed or
- * the browser offers no way to install. `variant="icon"` for toolbars,
- * `variant="menu"` for menu rows, `variant="button"` for a pill.
+ * "Install app" control. Always visible until the app is running installed.
+ * Click triggers the native prompt when the browser has offered one, and
+ * otherwise opens step-by-step instructions for this platform.
+ * `variant="icon"` for toolbars, `variant="menu"` for menu rows, `variant="button"` for a pill.
  */
 export function InstallButton({ appName, variant = 'menu', className }: { appName: string; variant?: 'icon' | 'menu' | 'button'; className?: string }) {
-  const { canInstall, install, showIosHelp, closeIosHelp } = useInstallPrompt();
-  if (!canInstall) return null;
-  const help = <IosInstallHelp open={showIosHelp} onClose={closeIosHelp} appName={appName} />;
+  const { installed, install, showHelp, closeHelp } = useInstallPrompt();
+  if (installed) return null;
+  const help = <InstallHelp open={showHelp} onClose={closeHelp} appName={appName} />;
   if (variant === 'icon') {
     return (
       <>

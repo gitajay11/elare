@@ -80,13 +80,13 @@ export function Navbar() {
 
         <Logo className="lg:mr-4" />
 
-        <nav className="hidden items-center gap-7 lg:flex" aria-label="Primary">
+        <nav className="hidden items-center gap-5 lg:flex xl:gap-7" aria-label="Primary">
           {NAV_LINKS.map((l) => (
             <NavLink
               key={l.to}
               to={l.to}
               end={l.end}
-              className={({ isActive }) => cn('relative py-2 text-[13.5px] font-medium tracking-[0.02em] text-ink-soft transition-colors hover:text-ink', isActive && 'text-ink')}
+              className={({ isActive }) => cn('relative whitespace-nowrap py-2 text-[13.5px] font-medium tracking-[0.02em] text-ink-soft transition-colors hover:text-ink', isActive && 'text-ink')}
             >
               {({ isActive }) => (
                 <>
@@ -99,7 +99,6 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-1">
-          <InstallButton appName="Élaré Beauty" variant="icon" className="hidden xl:inline-grid" />
           <IconButton label="Search" onClick={() => setSearch(true)}><Search size={20} /></IconButton>
           <Link to={user ? '/account' : signInPath(location.pathname)} className="hidden h-10 w-10 place-items-center rounded-full transition-colors hover:bg-blush/70 lg:grid" aria-label={user ? 'Account' : 'Sign in'}>
             <User size={20} />
@@ -108,6 +107,7 @@ export function Navbar() {
             <Heart size={20} />
             <Count n={wishlistCount} />
           </Link>
+          <InstallButton appName="Élaré Beauty" variant="icon" />
           <IconButton label={`Bag, ${count} items`} onClick={openCart}>
             <ShoppingBag size={20} />
             <Count n={count} />
