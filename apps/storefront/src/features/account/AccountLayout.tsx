@@ -30,7 +30,7 @@ export default function AccountLayout() {
         </div>
         <div className="flex gap-2">
           {isAdmin && ADMIN_URL && <a href={ADMIN_URL} className="rounded-full bg-blush px-4 py-2 text-sm font-semibold text-rose-deep">Admin dashboard</a>}
-          <button type="button" onClick={async () => { await signOut(); navigate('/'); }} className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold hover:border-rose hover:text-rose"><LogOut size={14} /> Sign out</button>
+          <button type="button" onClick={async () => { navigate('/'); await signOut(); }} className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold hover:border-rose hover:text-rose"><LogOut size={14} /> Sign out</button>
         </div>
       </div>
       <div className="grid gap-8 lg:grid-cols-[230px_1fr]">
