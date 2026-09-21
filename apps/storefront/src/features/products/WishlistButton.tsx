@@ -1,4 +1,5 @@
 import { motion, useReducedMotion } from 'framer-motion';
+import { signInPath } from '@/lib/routes';
 import { Heart } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@elare/ui';
@@ -18,7 +19,7 @@ export function WishlistButton({ productId, productName, variantId, className, s
     e.preventDefault();
     e.stopPropagation();
     if (!user) {
-      toast({ title: 'Sign in to save favourites', description: 'Your wishlist follows you across devices.', action: { label: 'Sign in', onClick: () => navigate(`/auth?next=${encodeURIComponent(location.pathname)}`) } });
+      toast({ title: 'Sign in to save favourites', description: 'Your wishlist follows you across devices.', action: { label: 'Sign in', onClick: () => navigate(signInPath(location.pathname)) } });
       return;
     }
     toggle(productId, variantId, productName);

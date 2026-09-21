@@ -4,16 +4,24 @@ import { motion } from 'framer-motion';
 import { Seo, useAuth, Button, Input, Tabs, PageLoader } from '@elare/ui';
 import { toast } from '@/lib/ui-store';
 import { client } from '@/lib/neon';
+import { CREATE_ACCOUNT, SIGN_IN } from '@/lib/routes';
 import { Logo } from '@/components/layout/Navbar';
 
 type Mode = 'signin' | 'signup' | 'reset';
 
-export default function Auth() {
+/** /signin and /createaccount share this page; the tab switch changes the URL. */
+export default function Auth({ initialMode = 'signin' }: { initialMode?: 'signin' | 'signup' }) {
   const [sp] = useSearchParams();
   const { user, loading, signIn, signUp, resetPassword, configured } = useAuth();
   const navigate = useNavigate();
   const next = sp.get('next') || '/account';
-  const [mode, setMode] = useState<Mode>((sp.get('mode') as Mode) || 'signin');
+  const [mode, setModeState] = useState<Mode>(initialMode);
+  const search = sp.get('next') ? `?next=${encodeURIComponent(sp.get('next')!)}` : '';
+  const setMode = (m: Mode) => {
+    setModeState(m);
+    if (m !== 'reset') navigate(`${m === 'signup' ? CREATE_ACCOUNT : SIGN_IN}${search}`, { replace: true });
+  };
+  useEffect(() => setModeState(initialMode), [initialMode]);
   const [form, setForm] = useState({ email: '', password: '', name: '', phone: '' });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -112,7 +120,7 @@ export function AuthCallback() {
       if (data.session) navigate(next, { replace: true });
       else setStatus('Waiting for confirmation…');
     });
-    const t = setTimeout(() => navigate('/auth', { replace: true }), 8000);
+    const t = setTimeout(() => navigate(SIGN_IN, { replace: true }), 8000);
     return () => clearTimeout(t);
   }, [navigate, sp, isReset]);
 
@@ -127,7 +135,7 @@ export function AuthCallback() {
     try {
       await completePasswordReset(token, password);
       toast({ title: 'Password updated', description: 'Sign in with your new password.', variant: 'success' });
-      navigate('/auth', { replace: true });
+      navigate(SIGN_IN, { replace: true });
     } catch (err) {
       setError((err as Error).message);
     } finally {

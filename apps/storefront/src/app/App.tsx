@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
-import { Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
+import { createAccountPath, signInPath } from '@/lib/routes';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { pageTransition, Toaster, PageLoader } from '@elare/ui';
 import { isConfigured } from '@/lib/neon';
@@ -34,6 +35,13 @@ const MyReviews = lazy(() => import('@/features/account/AccountPages').then((m) 
 const Addresses = lazy(() => import('@/features/account/AccountPages').then((m) => ({ default: m.Addresses })));
 const Profile = lazy(() => import('@/features/account/AccountPages').then((m) => ({ default: m.Profile })));
 
+
+/** Old /auth links: /auth?mode=signup → /createaccount, otherwise /signin (keeping ?next). */
+function LegacyAuthRedirect() {
+  const [sp] = useSearchParams();
+  const next = sp.get('next');
+  return <Navigate to={sp.get('mode') === 'signup' ? createAccountPath(next) : signInPath(next)} replace />;
+}
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -123,7 +131,9 @@ export default function StoreApp() {
           <Route path="/product/:slug" element={<Product />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/order/:id/confirmation" element={<OrderConfirmation />} />
-          <Route path="/auth" element={<Auth />} />
+          <Route path="/signin" element={<Auth initialMode="signin" />} />
+          <Route path="/createaccount" element={<Auth initialMode="signup" />} />
+          <Route path="/auth" element={<LegacyAuthRedirect />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/pages/:slug" element={<StaticPage />} />
           <Route path="/account" element={<AccountLayout />}>

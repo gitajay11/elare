@@ -80,16 +80,27 @@ export function AuthProvider({ client, fetchProfile, resetRedirectTo, configured
     profileFor.current = u.id;
     // onAuthStateChange can fire a beat before the new session's JWT is usable,
     // so retry briefly instead of clobbering a loaded profile.
+    let unauthorized = false;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         setProfile(await fetchProfile(extra));
         return;
-      } catch {
+      } catch (e) {
+        unauthorized = (e as { status?: number }).status === 401;
         await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
       }
     }
+    if (unauthorized) {
+      // The SDK still holds a session the server no longer accepts (deleted
+      // account, revoked session): drop it so the app behaves as signed out.
+      profileFor.current = null;
+      setProfile(null);
+      setUser(null);
+      await client.signOut().catch(() => undefined);
+      return;
+    }
     setProfile((prev) => (prev?.id === u.id ? prev : null));
-  }, [fetchProfile]);
+  }, [client, fetchProfile]);
 
   useEffect(() => {
     let mounted = true;

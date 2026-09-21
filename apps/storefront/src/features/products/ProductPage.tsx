@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { SIGN_IN } from '@/lib/routes';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -321,7 +322,7 @@ function Reviews({ detail }: { detail: ProductDetail }) {
             ) : user ? (
               <p className="text-[13px] text-mist">You can review this product once an order containing it has been delivered.</p>
             ) : (
-              <p className="text-[13px] text-mist"><Link to="/auth" className="text-rose underline-offset-4 hover:underline">Sign in</Link> to review a product you have purchased.</p>
+              <p className="text-[13px] text-mist"><Link to={SIGN_IN} className="text-rose underline-offset-4 hover:underline">Sign in</Link> to review a product you have purchased.</p>
             )}
           </div>
         </div>

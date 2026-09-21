@@ -1,4 +1,5 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { SIGN_IN, CREATE_ACCOUNT } from '@/lib/routes';
 import { motion } from 'framer-motion';
 import { ChevronRight, Heart, LogOut, User } from 'lucide-react';
 import { useAuth, Drawer, stagger, fadeUp } from '@elare/ui';
@@ -50,8 +51,8 @@ export function MobileMenu() {
           </div>
         ) : (
           <div className="flex gap-3">
-            <Link to="/auth" onClick={close} className="flex h-11 flex-1 items-center justify-center rounded-full bg-ink text-sm font-semibold text-white">Sign in</Link>
-            <Link to="/auth?mode=signup" onClick={close} className="flex h-11 flex-1 items-center justify-center rounded-full border border-ink text-sm font-semibold">Join</Link>
+            <Link to={SIGN_IN} onClick={close} className="flex h-11 flex-1 items-center justify-center rounded-full bg-ink text-sm font-semibold text-white">Sign in</Link>
+            <Link to={CREATE_ACCOUNT} onClick={close} className="flex h-11 flex-1 items-center justify-center rounded-full border border-ink text-sm font-semibold">Join</Link>
           </div>
         )}
       </div>

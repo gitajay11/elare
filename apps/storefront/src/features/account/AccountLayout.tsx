@@ -1,4 +1,5 @@
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { signInPath } from '@/lib/routes';
 import { Heart, LayoutDashboard, LogOut, MapPin, Package, Sparkles, Star, Tag, User } from 'lucide-react';
 import { useAuth, PageLoader } from '@elare/ui';
 import { ADMIN_URL } from '@/lib/neon';
@@ -20,7 +21,7 @@ export default function AccountLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   if (loading) return <PageLoader />;
-  if (!user) return <Navigate to={`/auth?next=${encodeURIComponent(location.pathname)}`} replace />;
+  if (!user) return <Navigate to={signInPath(location.pathname)} replace />;
   return (
     <div className="container-x py-8 lg:py-12">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">

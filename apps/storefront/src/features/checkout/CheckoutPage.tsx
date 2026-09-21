@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { signInPath } from '@/lib/routes';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -30,7 +31,7 @@ export default function Checkout() {
   const { user, profile, loading } = useAuth();
   const items = useCart((s) => s.items);
   if (loading) return <PageLoader />;
-  if (!user) return <Navigate to="/auth?next=/checkout" replace />;
+  if (!user) return <Navigate to={signInPath('/checkout')} replace />;
   if (!items.length) return <Navigate to="/cart" replace />;
   return <CheckoutFlow userEmail={user.email ?? ''} userName={profile?.full_name ?? ''} userPhone={profile?.phone ?? ''} />;
 }

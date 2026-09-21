@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { signInPath } from '@/lib/routes';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Menu, Search, ShoppingBag, User } from 'lucide-react';
@@ -99,7 +100,7 @@ export function Navbar() {
 
         <div className="flex items-center gap-1">
           <IconButton label="Search" onClick={() => setSearch(true)}><Search size={20} /></IconButton>
-          <Link to={user ? '/account' : `/auth?next=${encodeURIComponent(location.pathname)}`} className="hidden h-10 w-10 place-items-center rounded-full transition-colors hover:bg-blush/70 lg:grid" aria-label={user ? 'Account' : 'Sign in'}>
+          <Link to={user ? '/account' : signInPath(location.pathname)} className="hidden h-10 w-10 place-items-center rounded-full transition-colors hover:bg-blush/70 lg:grid" aria-label={user ? 'Account' : 'Sign in'}>
             <User size={20} />
           </Link>
           <Link to="/account/wishlist" className="relative hidden h-10 w-10 place-items-center rounded-full transition-colors hover:bg-blush/70 lg:grid" aria-label={`Wishlist, ${wishlistCount} items`}>

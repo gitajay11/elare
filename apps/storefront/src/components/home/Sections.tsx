@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { createAccountPath } from '@/lib/routes';
 import { motion } from 'framer-motion';
 import { ArrowRight, Gift, Plus, Sparkles, Star, Truck } from 'lucide-react';
 import { type HomePayload, type ProductCard as ProductCardType, type Review } from '@elare/types';
@@ -224,7 +225,7 @@ export function LoyaltySection() {
           <h2 id="loyalty-heading" className="mt-3 text-[2.4rem] leading-[1.05] sm:text-[3rem]">Every purchase earns you something beautiful.</h2>
           <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/75">Earn {per100} points for every ₹100 you spend. Redeem points at checkout, or use them to claim a product straight from your wishlist.</p>
           <div className="mt-8">
-            <Button variant="glow" size="lg" to={user ? '/account/loyalty' : '/auth?mode=signup&next=/account/loyalty'}>{user ? 'View my points' : 'Join and start earning'}</Button>
+            <Button variant="glow" size="lg" to={user ? '/account/loyalty' : createAccountPath('/account/loyalty')}>{user ? 'View my points' : 'Join and start earning'}</Button>
           </div>
         </div>
         <ul className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
