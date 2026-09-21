@@ -1,61 +1,69 @@
 # Élaré Beauty
 
-Production-ready full-stack e-commerce for a premium makeup brand — **two separate websites** (customer storefront and admin back-office) built from one codebase, sharing components, the API layer and the database.
+Production-ready full-stack e-commerce for a premium makeup brand: a **customer
+storefront** (main domain), an **admin back-office** (subdomain) and one
+**API**, in a pnpm + Turborepo monorepo that shares typed packages between them.
 
-- **Storefront / Admin** — React 19 · TypeScript · Vite 7 · Tailwind CSS 4 · Framer Motion · TanStack Query · Zustand
-- **Backend — Neon** — Lakebase Postgres (all business rules in SQL functions + RLS) · Managed Better Auth · Data API (PostgREST-compatible) · Object Storage (`media` bucket) · a Neon Function for payments and uploads
-- **Payments** — Razorpay through the Neon Function (secrets never reach the browser). Cash on delivery works with no gateway configured.
-
-## Architecture
-
-```
-Browser (storefront / admin, Vercel)
-  │  @neondatabase/neon-js
-  ├─► Neon Auth (Managed Better Auth)   sign-up / sign-in / sessions / JWTs
-  ├─► Neon Data API (PostgREST)         rpc('quote_cart'…), from('addresses')…  → RLS as `authenticated` / `anonymous`
-  └─► Neon Function `api` (Hono)         POST /payments/razorpay/*, POST /uploads → Object Storage `media`
-                                         connects to Postgres as the owner (only principal allowed to settle payments)
-```
+- **Sites** — React 19 · TypeScript · Vite 7 · Tailwind CSS 4 · Framer Motion · TanStack Query · Zustand
+- **API** — Hono on Neon Functions (Node 24); verifies Neon Auth JWTs and runs every request as the caller inside Postgres (RLS applies)
+- **Data** — Neon Postgres with all business rules in SQL functions + RLS · Managed Better Auth · Object Storage (`media` bucket) · Drizzle for typed table access
+- **Payments** — Razorpay through the API (secrets never reach the browser); Cash on delivery works with no gateway configured
 
 ```
-src/
-  lib/neon.ts         the Neon client (Supabase-shaped auth adapter + Data API) and apiFetch() for the Function
-  lib/api.ts          every backend call; the UI never computes prices, stock, points or permissions
-  apps/StoreApp.tsx   customer routes         apps/AdminApp.tsx   back-office routes (own login at /login)
-  store/, hooks/, components/, pages/
-db/migrations/        0001 schema · 0002 business logic (≈45 RPCs) · 0003 RLS + grants · 0004 catalogue seed
-functions/api/        the Neon Function (Node 24, Hono, pg, jose, @aws-sdk/client-s3)
-neon.ts               infrastructure declaration: auth, dataApi, buckets.media, functions.api
-scripts/              db-migrate · db-test (PGlite) · build-function · dev-function
+elare-beauty/
+├── apps/
+│   ├── storefront/      customer website          @elare/storefront
+│   ├── admin/           admin website             @elare/admin
+│   └── api/             Élaré API (Neon Function) @elare/api   src/modules/{auth,products,cart,checkout,orders,payments,…}
+├── packages/
+│   ├── db/              schema (Drizzle) · migrations · seed · client   @elare/db
+│   ├── types/           shared types                                      @elare/types
+│   ├── validation/      Zod schemas (API + forms)                          @elare/validation
+│   ├── ui/              design system, AuthProvider, SEO, motion           @elare/ui
+│   ├── config/          brand, order lifecycle, defaults                   @elare/config
+│   └── utils/           formatting, cn(), typed HTTP client               @elare/utils
+├── docs/                architecture.md · database.md · api.md
+├── neon.ts              infrastructure: auth, dataApi, buckets.media, functions.api
+├── pnpm-workspace.yaml · turbo.json · .env.example
 ```
+
+Read [docs/architecture.md](docs/architecture.md) first, then
+[docs/database.md](docs/database.md) and [docs/api.md](docs/api.md).
 
 ## Setup
 
-### 1. Neon project
-
 ```bash
-npm install
-npm i -g neon && neon login          # or set NEON_API_KEY
-neon link --project-id <project-id> --branch production -y   # writes .neon and pulls DATABASE_URL etc. into .env.local
-neon deploy --env .env.local          # provisions Auth, Data API, the media bucket and deploys the api Function
-npm run db:migrate                    # applies db/migrations to the linked branch (tracked in schema_migrations)
+pnpm install
+cp .env.example .env.local
 ```
 
-The project must be in an AWS region that supports Functions and Object Storage (`aws-us-east-2`, `aws-us-east-1`, `aws-eu-central-1`, `aws-ap-southeast-1`).
+### 1. Neon
 
-If you prefer the console/MCP path instead of the CLI: enable **Managed Better Auth** and the **Data API** (with default grants) on the branch, create a `public_read` bucket named `media`, run `npm run db:migrate` with `DATABASE_URL` set, and deploy `functions/api` (see below).
+```bash
+npm i -g neon && neon login                       # or set NEON_API_KEY
+neon link --project-id <project-id> --branch production -y   # pulls DATABASE_URL, NEON_AUTH_* into .env.local
+neon deploy --env .env.local                      # Auth, media bucket, and the api Function (apps/api)
+pnpm db:migrate                                   # packages/db/migrations + seed, tracked in schema_migrations
+```
 
-### 2. Frontend env
+The project must be in a region with Functions and Object Storage
+(`aws-us-east-1`, `aws-us-east-2`, `aws-eu-central-1`, `aws-ap-southeast-1`).
+Create a storage credential for the bucket and put it in `.env.local`
+(`AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`).
 
-Copy `.env.example` → `.env` (or let `neon link` write `.env.local`) and set:
+### 2. Environment
 
-| Variable | Purpose |
-|---|---|
-| `VITE_NEON_URL` | `https://<endpoint-host>/<database>` from the connection string, no credentials. The SDK derives the Auth and Data API URLs. |
-| `VITE_API_URL` | Public URL of the `api` Function (`neon functions get api` → `invocation_url`). Locally: `http://localhost:8790` from `npm run functions:dev`. |
-| `VITE_SITE_URL`, `VITE_STORE_URL`, `VITE_ADMIN_URL` | Canonical URLs and cross-links between the two sites |
-| `VITE_RAZORPAY_KEY_ID` | Public key id; enables "Pay online" |
-| `VITE_APP` | `admin` on the admin Vercel project (default `store`) |
+One `.env.local` at the repo root serves every workspace.
+
+| Variable | Used by | Purpose |
+|---|---|---|
+| `VITE_NEON_URL` | both sites | `https://<endpoint-host>/<database>`; the SDK derives the Auth URL |
+| `VITE_API_URL` | both sites | the API: `http://localhost:8790` locally, the Function URL in production |
+| `VITE_SITE_URL` / `VITE_STORE_URL` / `VITE_ADMIN_URL` | both sites | canonical URLs and cross-links (domain ↔ subdomain) |
+| `DATABASE_URL`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL` | api, db | database and JWT verification |
+| `ALLOWED_ORIGINS` | api | comma-separated site origins; `http://localhost:*` locally |
+| `AWS_*`, `MEDIA_BUCKET` | api | uploads |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | api | optional; enables "Pay online" |
 
 ### 3. First admin
 
@@ -65,53 +73,39 @@ Sign up in the storefront, then promote the account:
 update public.profiles set role = 'admin' where email = 'you@example.com';
 ```
 
-(Profiles are created lazily by `ensure_profile()` on first sign-in; run the update after the first visit.)
-
 ### 4. Trusted origins
 
-Localhost is pre-approved. Add production origins for Auth: `neon neon-auth domain add https://shop.example.com` (and the admin origin), and list them in `ALLOWED_ORIGINS` for the Function.
+Add both production origins to Neon Auth (`neon neon-auth domain add https://…`)
+and to `ALLOWED_ORIGINS` for the API.
 
 ## Run locally
 
 ```bash
-npm run dev           # storefront on :5173, against the Neon branch in .env.local
-npm run dev:admin     # admin on :5174
-npm run functions:dev # the api Function on :8790 (uploads, payments) — set VITE_API_URL=http://localhost:8790
-npm run db:test       # 140 backend assertions on PGlite (no network)
+pnpm api:dev          # http://localhost:8790
+pnpm storefront:dev   # http://localhost:5173
+pnpm admin:dev        # http://localhost:5174
+pnpm db:test          # 140 backend assertions in PGlite (no network)
+pnpm typecheck        # every package
+pnpm build            # both sites → dist/, API → apps/api/dist-functions/api.zip
 ```
 
-Neon sessions live on the auth origin, so a sign-in on the storefront is also visible to the admin site; non-admins are refused there.
+Neon sessions live on the auth origin, so a sign-in on the storefront is also
+visible to the admin site; non-admins are refused there (and by the API).
 
-## Two sites, one repo
+## Deploy
 
-| | Storefront | Admin |
-|---|---|---|
-| Entry | `src/apps/StoreApp.tsx` | `src/apps/AdminApp.tsx` |
-| Build | `npm run build:store` | `npm run build:admin` (or `VITE_APP=admin npm run build`) |
-| Routes | `/`, `/shop`, `/product/:slug`, `/checkout`, `/account/*` | `/login`, `/`, `/products`, `/orders`, `/customers`, … |
+| Target | How |
+|---|---|
+| Database, Auth, Storage, API | `neon deploy --env .env.local` |
+| Storefront (`elare.example.com`) | Vercel project from this repo, root `apps/storefront` (`vercel.json` runs `pnpm --filter @elare/storefront build`) |
+| Admin (`admin.elare.example.com`) | second Vercel project, root `apps/admin` |
 
-Each bundle contains only its own pages. Deploy as **two Vercel projects from this repository**; both use `npm run build`, the admin project sets `VITE_APP=admin`.
-
-## Payments
-
-Set the Function env (`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`) in `.env.local` and `neon deploy --env .env.local`; point the Razorpay webhook at `<api url>/payments/razorpay/webhook` for `payment.captured` / `payment.failed`. Until then the checkout offers Cash on delivery only.
+Set the `VITE_*` variables on each Vercel project; each bundle contains only its own pages.
 
 ## Trust boundaries
 
-- `quote_cart` prices the bag server-side; `place_order` re-prices it under row locks, decrements stock, applies the coupon, redeems points and issues the free gift in one transaction.
-- `orders.status` is the single source of truth; every change is journaled by trigger and validated against a transition table. Cancel/refund restock and reverse points.
-- Points are credited only on **delivered**; reviews only from accounts whose order was delivered; social proof only from confirmed orders.
-- `mark_order_paid` / `mark_payment_failed` are revoked from API roles — only the Function (owner connection) settles payments after signature verification.
-- Customers cannot change their own `role`/`status` (trigger) or read other customers' rows (RLS). The Function verifies every JWT against Neon Auth's JWKS.
-
-## Scripts
-
-| Command | What it does |
-|---|---|
-| `npm run dev` / `npm run dev:admin` | Storefront / admin |
-| `npm run build:store` / `npm run build:admin` | Production builds to `dist/` |
-| `npm run db:migrate` | Apply `db/migrations` to `DATABASE_URL` |
-| `npm run db:test` | Backend test-suite on PGlite |
-| `npm run functions:dev` | Run the api Function locally |
-| `npm run functions:build` | Bundle the Function to `dist-functions/api.zip` (API/CI deploys) |
-| `npm run typecheck` | `tsc -b` (app, node, functions) |
+- `quote_cart` prices the bag; `place_order` re-prices it under row locks, decrements stock, applies the coupon, redeems points and issues the free gift in one transaction. The UI never computes a price.
+- `orders.status` is the single source of truth; every change is journaled and validated against a transition table. Cancel / refund restock and reverse points; points are credited only on **delivered**.
+- Reviews come only from real accounts, are verified only with a delivered order, and go live after moderation. Social proof counts only confirmed orders.
+- The API runs each request as the caller (`set local role` + JWT claims), so RLS and `require_admin()` apply to it as well. Only Razorpay settlement runs as the owner, after the signature and the order's owner are verified.
+- Customers cannot change their own `role` / `status` or read other customers' rows.

@@ -1,0 +1,18 @@
+export { storeRouter } from './store/router';
+export { authRouter } from './auth/router';
+export { productsRouter, adminProductsRouter } from './products/router';
+export { adminCategoriesRouter } from './categories/router';
+export { adminInventoryRouter } from './inventory/router';
+export { cartRouter } from './cart/router';
+export { wishlistRouter } from './wishlist/router';
+export { checkoutRouter } from './checkout/router';
+export { ordersRouter, adminOrdersRouter } from './orders/router';
+export { paymentsRouter } from './payments/router';
+export { couponsRouter, adminCouponsRouter } from './coupons/router';
+export { loyaltyRouter } from './loyalty/router';
+export { reviewsRouter, adminReviewsRouter } from './reviews/router';
+export { adminGiftRulesRouter } from './free-gifts/router';
+export { adminCustomersRouter } from './customers/router';
+export { adminAnalyticsRouter } from './analytics/router';
+export { adminSettingsRouter } from './settings/router';
+export { mediaRouter } from './media/router';

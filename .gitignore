@@ -10,3 +10,4 @@ supabase/.temp
 .vercel
 dist-functions
 .neon
+.turbo

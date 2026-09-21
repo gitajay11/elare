@@ -1,0 +1,10 @@
+{
+  "name": "@elare/validation",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc -p tsconfig.json" },
+  "dependencies": { "@elare/config": "workspace:*", "zod": "^4.1.0" },
+  "devDependencies": { "typescript": "^5.9.0" }
+}

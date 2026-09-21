@@ -1,0 +1,25 @@
+{
+  "name": "@elare/ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css"
+  },
+  "scripts": { "typecheck": "tsc -p tsconfig.json" },
+  "dependencies": {
+    "@elare/config": "workspace:*",
+    "@elare/types": "workspace:*",
+    "@elare/utils": "workspace:*",
+    "framer-motion": "^12.23.0",
+    "lucide-react": "^0.544.0",
+    "zustand": "^5.0.8"
+  },
+  "peerDependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.9.0"
+  },
+  "devDependencies": { "@types/react": "^19.1.0", "@types/react-dom": "^19.1.0", "react": "^19.1.0", "react-dom": "^19.1.0", "react-router-dom": "^7.9.0", "typescript": "^5.9.0" }
+}

@@ -1,12 +1,12 @@
 import { defineConfig } from "@neon/config/v1";
 
 // Élaré Beauty on Neon: Lakebase Postgres + Managed Better Auth + Data API
-// (PostgREST-compatible, used by the storefront and admin through neon-js),
-// a public_read bucket for product/review media, and the API Function that
-// handles Razorpay payments and uploads next to the database.
+// (PostgREST-compatible; the SDK derives auth URLs from it),
+// a public_read bucket for product/review media, and the API Function
+// (apps/api) that the storefront and admin sites call.
 //
 // Deploy with `neon deploy --env .env.local` (the file must contain every key
-// listed under functions.api.env). `npm run db:migrate` applies db/migrations.
+// listed under functions.api.env). `pnpm db:migrate` applies packages/db.
 export default defineConfig({
   auth: true,
   dataApi: true,
@@ -15,8 +15,8 @@ export default defineConfig({
   },
   functions: {
     api: {
-      name: "Élaré API (payments + uploads)",
-      source: "functions/api/index.ts",
+      name: "Élaré API",
+      source: "apps/api/src/server.ts",
       env: {
         MEDIA_BUCKET: "media",
         ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS ?? "*",

@@ -3,9 +3,10 @@
   "configurations": [
     {
       "name": "elare-store",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "pnpm",
       "runtimeArgs": [
-        "run",
+        "--filter",
+        "@elare/storefront",
         "dev"
       ],
       "port": 5173,
@@ -13,13 +14,24 @@
     },
     {
       "name": "elare-admin",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "pnpm",
       "runtimeArgs": [
-        "run",
-        "dev:admin"
+        "--filter",
+        "@elare/admin",
+        "dev"
       ],
       "port": 5174,
       "autoPort": true
+    },
+    {
+      "name": "elare-api",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@elare/api",
+        "dev"
+      ],
+      "port": 8790
     }
   ]
 }
