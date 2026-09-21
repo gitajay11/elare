@@ -9,7 +9,7 @@ import { Logo } from '@/components/layout/Navbar';
 
 type Mode = 'signin' | 'signup' | 'reset';
 
-/** /signin and /createaccount share this page; the tab switch changes the URL. */
+/** /signin and /signup share this page; the tab switch changes the URL. */
 export default function Auth({ initialMode = 'signin' }: { initialMode?: 'signin' | 'signup' }) {
   const [sp] = useSearchParams();
   const { user, loading, signIn, signUp, resetPassword, configured } = useAuth();

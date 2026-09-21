@@ -1,8 +1,8 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { Navigate, Outlet, Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
 import { createAccountPath, signInPath } from '@/lib/routes';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { pageTransition, Toaster, PageLoader } from '@elare/ui';
+import { useReducedMotion } from 'framer-motion';
+import { Toaster, PageLoader } from '@elare/ui';
 import { isConfigured } from '@/lib/neon';
 import { useCartSync } from '@/lib/hooks';
 import { Navbar } from '@/components/layout/Navbar';
@@ -80,19 +80,17 @@ function ConfigBanner() {
 function StorefrontLayout() {
   useCartSync();
   const location = useLocation();
-  const reduce = useReducedMotion();
   return (
     <div className="flex min-h-screen flex-col">
       <ConfigBanner />
       <Navbar />
       <main className="flex-1">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div key={location.pathname} {...(reduce ? {} : pageTransition)}>
-            <Suspense fallback={<PageLoader />}>
-              <Outlet />
-            </Suspense>
-          </motion.div>
-        </AnimatePresence>
+        {/* Remount per route with a CSS enter animation: no exit phase to race a lazy chunk. */}
+        <div key={location.pathname} className="page-enter">
+          <Suspense fallback={<PageLoader />}>
+            <Outlet />
+          </Suspense>
+        </div>
       </main>
       <Footer />
       <MobileMenu />
@@ -132,7 +130,8 @@ export default function StoreApp() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/order/:id/confirmation" element={<OrderConfirmation />} />
           <Route path="/signin" element={<Auth initialMode="signin" />} />
-          <Route path="/createaccount" element={<Auth initialMode="signup" />} />
+          <Route path="/signup" element={<Auth initialMode="signup" />} />
+          <Route path="/createaccount" element={<Navigate to="/signup" replace />} />
           <Route path="/auth" element={<LegacyAuthRedirect />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/pages/:slug" element={<StaticPage />} />

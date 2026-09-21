@@ -1,8 +1,8 @@
 /** Auth routes and helpers for linking to them. */
 export const SIGN_IN = '/signin';
-export const CREATE_ACCOUNT = '/createaccount';
+export const CREATE_ACCOUNT = '/signup';
 
-const isAuthPath = (p: string) => /^\/(signin|createaccount|auth)(\/|\?|$)/.test(p);
+const isAuthPath = (p: string) => /^\/(signin|signup|createaccount|auth)(\/|\?|$)/.test(p);
 
 /** Where to send a signed-out visitor; `next` is dropped when it would be pointless. */
 export function signInPath(next?: string | null): string {
