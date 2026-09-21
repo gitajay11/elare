@@ -1,0 +1,208 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Élaré design tokens
+   --------------------------------------------------------------------------- */
+@theme {
+  --color-ivory: #fff9fa;
+  --color-blush: #f8dde5;
+  --color-blush-deep: #f1c8d5;
+  --color-pink: #e8a7b8;
+  --color-pink-deep: #d98aa0;
+  --color-rose: #b85c78;
+  --color-rose-deep: #8f3f5a;
+  --color-champagne: #ecdcc0;
+  --color-champagne-deep: #c9ad7a;
+  --color-nude: #f2e8e2;
+  --color-nude-deep: #e3d2c8;
+  --color-ink: #241d20;
+  --color-ink-soft: #5c5257;
+  --color-mist: #8a7f84;
+  --color-line: #efdde3;
+  --color-success: #3d7a5a;
+  --color-danger: #b8434f;
+
+  --font-display: "Cormorant Garamond", "Times New Roman", Georgia, serif;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+
+  --ease-luxe: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --shadow-soft: 0 12px 34px -16px rgba(184, 92, 120, 0.22);
+  --shadow-card: 0 1px 2px rgba(36, 29, 32, 0.04), 0 18px 40px -24px rgba(36, 29, 32, 0.18);
+  --shadow-float: 0 24px 60px -24px rgba(36, 29, 32, 0.28);
+
+  --radius-xl2: 1.25rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Base
+   --------------------------------------------------------------------------- */
+@layer base {
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  html, body { background: var(--color-ivory); color: var(--color-ink); }
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    line-height: 1.55;
+    overflow-x: hidden;
+  }
+  h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: -0.01em; }
+  h1, h2, h3 { font-weight: 500; line-height: 1.05; }
+  a { color: inherit; text-decoration: none; }
+  img { display: block; max-width: 100%; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  input, select, textarea { font: inherit; color: inherit; }
+  ::selection { background: var(--color-blush-deep); color: var(--color-ink); }
+  :focus-visible { outline: 2px solid var(--color-rose); outline-offset: 3px; border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Utilities & components
+   --------------------------------------------------------------------------- */
+@utility container-x {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+  max-width: 88rem;
+  @media (width >= 40rem) { padding-inline: 2rem; }
+  @media (width >= 64rem) { padding-inline: 3rem; }
+}
+
+@utility eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--color-rose);
+}
+
+@utility hairline {
+  border: 1px solid var(--color-line);
+}
+
+@utility glass {
+  background: rgba(255, 249, 250, 0.72);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+@utility text-balance { text-wrap: balance; }
+
+/* Signature glow button — a near-black button with a bank of rose light
+   pooled at its foot. The light is a background gradient clipped by the
+   button's own rounded rect (overflow:hidden), not a shadow or a bar. */
+.btn-glow {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
+  color: #fff;
+  border-radius: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  background: linear-gradient(
+    to top,
+    #f6c9d6 1px, #f2bfcf 2px, #ecb1c4 3px, #e39fb5 4px, #d88aa3 5px,
+    #c66f8c 6px, #b85c78 7px, #a94f6b 8px, #93425c 9px, #7a364d 10px,
+    #62303f 12px, #55303a 13px, #4a2b33 14px, #3c262c 16px,
+    #322226 18px, #2d1f23 20px, #291e22 24px, #261d21 30px,
+    #241d20 34px, #241d20 100%
+  );
+  box-shadow:
+    inset 0 3px 3px -2px rgba(255, 220, 230, 0.12),
+    inset 1px 0 0 rgba(255, 255, 255, 0.08),
+    inset -1px 0 0 rgba(255, 255, 255, 0.08),
+    0 1px 0 rgba(232, 167, 184, 0.35),
+    1px 0 0 rgba(232, 167, 184, 0.16), -1px 0 0 rgba(232, 167, 184, 0.16),
+    0 0 8px rgba(184, 92, 120, 0.1),
+    0 2px 5px -3px rgba(184, 92, 120, 0.45);
+  transition: transform 0.25s var(--ease-luxe), box-shadow 0.25s, filter 0.25s;
+}
+.btn-glow::before {
+  content: "";
+  position: absolute;
+  left: 22%; right: 38%; top: 0.8px; height: 1.9px;
+  z-index: 1;
+  filter: blur(0.55px);
+  background: linear-gradient(90deg, rgba(255, 210, 225, 0) 0%, rgba(255, 210, 225, 0.55) 34%, rgba(255, 232, 240, 0.72) 50%, rgba(255, 210, 225, 0.55) 66%, rgba(255, 210, 225, 0) 100%);
+}
+.btn-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    linear-gradient(90deg, rgba(255, 215, 228, 0.7), rgba(255, 215, 228, 0) 13px),
+    linear-gradient(270deg, rgba(255, 215, 228, 0.7), rgba(255, 215, 228, 0) 13px);
+  -webkit-mask: linear-gradient(to top, #000 0, #000 6px, rgba(0, 0, 0, 0.4) 12px, rgba(0, 0, 0, 0.15) 18px, rgba(0, 0, 0, 0.09) 24px, rgba(0, 0, 0, 0.02) 30px, rgba(0, 0, 0, 0.02) 100%);
+  mask: linear-gradient(to top, #000 0, #000 6px, rgba(0, 0, 0, 0.4) 12px, rgba(0, 0, 0, 0.15) 18px, rgba(0, 0, 0, 0.09) 24px, rgba(0, 0, 0, 0.02) 30px, rgba(0, 0, 0, 0.02) 100%);
+}
+.btn-glow > span { position: relative; z-index: 2; display: block; line-height: 1; text-shadow: 0 1px 2px rgba(20, 0, 10, 0.4); }
+.btn-glow:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 232, 0.6), inset 1px 0 0 rgba(255, 200, 218, 0.35), inset -1px 0 0 rgba(255, 200, 218, 0.35),
+    0 8px 22px -6px rgba(184, 92, 120, 0.55);
+}
+.btn-glow:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Soft pink halo used for the selected shade */
+.shade-ring { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--color-pink), 0 0 18px 2px rgba(232, 167, 184, 0.55); }
+
+/* Editorial image reveal (used with framer initial/animate) */
+.img-reveal { clip-path: inset(0 0 0 0 round 24px); }
+
+/* Fine card border + hover lift */
+.card {
+  background: #fff;
+  border: 1px solid var(--color-line);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+}
+
+/* Reduced-motion: keep the 3D ring still but visible */
+@media (prefers-reduced-motion: reduce) {
+  .ring-card { transition: none !important; }
+}
+
+/* Range slider (price filter) */
+input[type="range"].range {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 3px; background: var(--color-line); border-radius: 999px; outline: none;
+}
+input[type="range"].range::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 2px solid var(--color-rose); box-shadow: var(--shadow-soft); cursor: pointer;
+}
+input[type="range"].range::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 2px solid var(--color-rose); cursor: pointer;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+.skeleton {
+  background: linear-gradient(90deg, #f6ebef 0px, #fbf3f6 40px, #f6ebef 80px);
+  background-size: 800px 100%;
+  animation: shimmer 1.6s linear infinite;
+  border-radius: 12px;
+}
+
+/* Custom subtle cursor dot on desktop pointer devices */
+@media (hover: hover) and (pointer: fine) {
+  .cursor-dot { position: fixed; z-index: 9999; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--color-rose); pointer-events: none; opacity: 0.55; mix-blend-mode: multiply; transition: transform 0.18s var(--ease-luxe), opacity 0.2s; }
+  .cursor-dot.is-link { transform: scale(2.6); opacity: 0.22; }
+}
