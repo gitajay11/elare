@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
-import { BarChart3, Boxes, Gift, LayoutDashboard, Menu, Package, Settings, ShoppingBag, Sparkles, Star, Tag, Tags, Users, X } from 'lucide-react';
+import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { BarChart3, Boxes, Gift, LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingBag, Sparkles, Star, Tag, Tags, Users, X } from 'lucide-react';
 import { useAuth, PageLoader, Seo, Logo } from '@elare/ui';
 import { STORE_URL } from '@/lib/neon';
 import { cn } from '@elare/utils';
@@ -23,9 +23,12 @@ const LINKS = [
 export default function AdminLayout() {
   const { user, loading, isAdmin, profile, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  // Leave the protected area first so the guard below does not add ?next.
+  const logout = async () => { navigate('/login', { replace: true }); await signOut(); };
   if (loading) return <PageLoader />;
-  if (!user) return <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />;
+  if (!user) return <Navigate to={location.pathname === '/' ? '/login' : `/login?next=${encodeURIComponent(location.pathname)}`} replace />;
   if (!isAdmin) {
     return (
       <div className="container-x grid min-h-[60vh] place-items-center text-center">
@@ -35,7 +38,7 @@ export default function AdminLayout() {
           <p className="mt-2 text-sm text-ink-soft">Signed in as {user.email}. Ask an administrator to grant you access.</p>
           <div className="mt-6 flex justify-center gap-3">
             <a href={STORE_URL} className="rounded-full border border-line px-5 py-2.5 text-sm font-semibold hover:border-rose hover:text-rose">Back to store</a>
-            <button type="button" onClick={() => signOut()} className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white">Sign out</button>
+            <button type="button" onClick={logout} className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white">Sign out</button>
           </div>
         </div>
       </div>
@@ -59,13 +62,19 @@ export default function AdminLayout() {
         <div className="mt-6">{nav}</div>
         <p className="mt-8 truncate text-[12px] text-mist">{profile?.full_name || user.email}</p>
         <a href={STORE_URL} className="mt-1 block text-[12px] font-semibold text-rose">← Back to store</a>
+        <button type="button" onClick={logout} className="mt-4 inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-[12.5px] font-semibold hover:border-rose hover:text-rose"><LogOut size={14} /> Sign out</button>
       </aside>
       <div className="min-w-0">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-white/90 px-4 backdrop-blur lg:hidden">
           <Logo />
           <button type="button" aria-label="Menu" onClick={() => setOpen((o) => !o)} className="grid h-10 w-10 place-items-center rounded-full hover:bg-blush/60">{open ? <X size={20} /> : <Menu size={20} />}</button>
         </header>
-        {open && <div className="border-b border-line bg-white p-4 lg:hidden">{nav}</div>}
+        {open && (
+          <div className="border-b border-line bg-white p-4 lg:hidden">
+            {nav}
+            <button type="button" onClick={logout} className="mt-3 inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-[12.5px] font-semibold"><LogOut size={14} /> Sign out</button>
+          </div>
+        )}
         <main className="p-4 sm:p-6 lg:p-8"><Outlet /></main>
       </div>
     </div>
