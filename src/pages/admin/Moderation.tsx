@@ -6,6 +6,7 @@ import { adminApi, type InventoryRow } from '@/lib/api';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { toast } from '@/store/ui';
+import { STORE_URL } from '@/lib/supabase';
 import { Button } from '@/components/ui/Button';
 import { Input, Select, Checkbox } from '@/components/ui/Field';
 import { Badge, Skeleton, Stars, Swatch } from '@/components/ui/Primitives';
@@ -35,11 +36,11 @@ export function AdminReviews() {
             <li key={r.id} className="rounded-2xl border border-line bg-white p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2"><Stars value={r.rating} size={13} /><Link to={`/product/${r.product.slug}`} className="font-semibold hover:text-rose">{r.product.name}</Link>{r.is_verified && <Badge tone="success">Verified</Badge>}<Badge tone={r.status === 'approved' ? 'blush' : r.status === 'hidden' ? 'danger' : 'neutral'}>{r.status}</Badge></div>
+                  <div className="flex flex-wrap items-center gap-2"><Stars value={r.rating} size={13} /><a href={`${STORE_URL}/product/${r.product.slug}`} target="_blank" rel="noreferrer" className="font-semibold hover:text-rose">{r.product.name}</a>{r.is_verified && <Badge tone="success">Verified</Badge>}<Badge tone={r.status === 'approved' ? 'blush' : r.status === 'hidden' ? 'danger' : 'neutral'}>{r.status}</Badge></div>
                   {r.title && <p className="mt-1.5 font-medium">{r.title}</p>}
                   <p className="text-sm text-ink-soft">{r.body}</p>
                   {r.images.length > 0 && <div className="mt-2 flex gap-2">{r.images.map((u) => <a key={u} href={u} target="_blank" rel="noreferrer"><img src={u} alt="" className="h-14 w-14 rounded-lg object-cover" /></a>)}</div>}
-                  <p className="mt-2 text-[12px] text-mist"><Link to={`/admin/customers/${r.customer.id}`} className="font-semibold text-ink-soft hover:text-rose">{r.customer.name || r.customer.email}</Link> · {formatDateTime(r.created_at)}</p>
+                  <p className="mt-2 text-[12px] text-mist"><Link to={`/customers/${r.customer.id}`} className="font-semibold text-ink-soft hover:text-rose">{r.customer.name || r.customer.email}</Link> · {formatDateTime(r.created_at)}</p>
                 </div>
                 <div className="flex gap-1">
                   {r.status !== 'approved' && <Button size="sm" variant="soft" icon={<Check size={14} />} onClick={() => setState.mutate({ id: r.id, s: 'approved' })}>Approve</Button>}
@@ -87,7 +88,7 @@ export function AdminInventory() {
             const state = r.quantity === 0 ? 'out' : r.quantity <= r.threshold ? 'low' : 'ok';
             return (
               <tr key={r.variant_id} className={cn('hover:bg-ivory', !r.is_active && 'opacity-50')}>
-                <td className="px-4 py-2.5"><Link to={`/admin/products/${r.product_id}`} className="flex items-center gap-3 font-semibold hover:text-rose"><span className="h-10 w-8 overflow-hidden rounded-md bg-nude">{r.image && <img src={r.image} alt="" className="h-full w-full object-cover" />}</span>{r.product}</Link></td>
+                <td className="px-4 py-2.5"><Link to={`/products/${r.product_id}`} className="flex items-center gap-3 font-semibold hover:text-rose"><span className="h-10 w-8 overflow-hidden rounded-md bg-nude">{r.image && <img src={r.image} alt="" className="h-full w-full object-cover" />}</span>{r.product}</Link></td>
                 <td className="px-4 py-2.5"><span className="flex items-center gap-2">{r.shade_hex && <Swatch hex={r.shade_hex} name="" size={12} />}{r.variant}</span></td>
                 <td className="px-4 py-2.5 font-mono text-[12px] text-mist">{r.sku}</td>
                 <td className="px-4 py-2.5"><span className={cn('font-semibold', state === 'out' ? 'text-danger' : state === 'low' ? 'text-rose' : '')}>{r.quantity}</span>{state !== 'ok' && <Badge tone={state === 'out' ? 'danger' : 'blush'} className="ml-2">{state === 'out' ? 'Out' : 'Low'}</Badge>}</td>

@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev:admin": "vite --mode admin --port 5174",
+    "build": "node scripts/build.mjs",
+    "build:store": "node scripts/build.mjs store",
+    "build:admin": "node scripts/build.mjs admin",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "db:test": "node scripts/db-test.mjs",

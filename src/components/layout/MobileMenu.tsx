@@ -2,6 +2,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronRight, Heart, LogOut, User } from 'lucide-react';
 import { useAuth } from '@/store/auth';
+import { ADMIN_URL } from '@/lib/supabase';
 import { useUi } from '@/store/ui';
 import { useStoreConfig } from '@/hooks/useStore';
 import { Drawer } from '@/components/ui/Overlay';
@@ -46,7 +47,7 @@ export function MobileMenu() {
             <p className="text-sm text-ink-soft">Signed in as <span className="font-semibold text-ink">{profile?.full_name || user.email}</span></p>
             <Link to="/account" onClick={close} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold hover:bg-blush/50"><User size={16} /> My account</Link>
             <Link to="/account/wishlist" onClick={close} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold hover:bg-blush/50"><Heart size={16} /> Wishlist</Link>
-            {isAdmin && <Link to="/admin" onClick={close} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-rose hover:bg-blush/50">Admin dashboard</Link>}
+            {isAdmin && ADMIN_URL && <a href={ADMIN_URL} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-rose hover:bg-blush/50">Admin dashboard</a>}
             <button type="button" onClick={async () => { await signOut(); close(); navigate('/'); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-ink-soft hover:bg-blush/50"><LogOut size={16} /> Sign out</button>
           </div>
         ) : (

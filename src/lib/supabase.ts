@@ -11,3 +11,10 @@ export const supabase = createClient(url || 'https://placeholder.supabase.co', a
 });
 
 export const SITE_URL = (import.meta.env.VITE_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '')).replace(/\/$/, '');
+
+/** Which app this bundle is: the customer storefront or the admin back-office (vite --mode admin). */
+export const APP: 'store' | 'admin' = import.meta.env.MODE === 'admin' ? 'admin' : 'store';
+/** Public origin of the storefront (used by the admin app for outbound links). */
+export const STORE_URL = (import.meta.env.VITE_STORE_URL || SITE_URL).replace(/\/$/, '');
+/** Public origin of the admin back-office; empty when not deployed. */
+export const ADMIN_URL = (import.meta.env.VITE_ADMIN_URL || '').replace(/\/$/, '');

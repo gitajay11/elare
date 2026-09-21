@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_ANON_KEY: string;
   readonly VITE_SITE_URL?: string;
   readonly VITE_RAZORPAY_KEY_ID?: string;
+  readonly VITE_STORE_URL?: string;
+  readonly VITE_ADMIN_URL?: string;
 }
 interface ImportMeta {
   readonly env: ImportMetaEnv;

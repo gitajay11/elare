@@ -2,24 +2,25 @@ import { useState } from 'react';
 import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { BarChart3, Boxes, Gift, LayoutDashboard, Menu, Package, Settings, ShoppingBag, Sparkles, Star, Tag, Tags, Users, X } from 'lucide-react';
 import { useAuth } from '@/store/auth';
+import { STORE_URL } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/layout/Navbar';
 import { PageLoader } from '@/components/ui/Spinner';
 import { Seo } from '@/lib/seo';
 
 const LINKS = [
-  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/admin/products', label: 'Products', icon: Package },
-  { to: '/admin/categories', label: 'Categories', icon: Tags },
-  { to: '/admin/orders', label: 'Orders', icon: ShoppingBag },
-  { to: '/admin/customers', label: 'Customers', icon: Users },
-  { to: '/admin/coupons', label: 'Coupons', icon: Tag },
-  { to: '/admin/loyalty', label: 'Loyalty', icon: Sparkles },
-  { to: '/admin/gifts', label: 'Free gifts', icon: Gift },
-  { to: '/admin/reviews', label: 'Reviews', icon: Star },
-  { to: '/admin/inventory', label: 'Inventory', icon: Boxes },
-  { to: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-  { to: '/admin/settings', label: 'Settings', icon: Settings },
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/products', label: 'Products', icon: Package },
+  { to: '/categories', label: 'Categories', icon: Tags },
+  { to: '/orders', label: 'Orders', icon: ShoppingBag },
+  { to: '/customers', label: 'Customers', icon: Users },
+  { to: '/coupons', label: 'Coupons', icon: Tag },
+  { to: '/loyalty', label: 'Loyalty', icon: Sparkles },
+  { to: '/gifts', label: 'Free gifts', icon: Gift },
+  { to: '/reviews', label: 'Reviews', icon: Star },
+  { to: '/inventory', label: 'Inventory', icon: Boxes },
+  { to: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export default function AdminLayout() {
@@ -27,7 +28,7 @@ export default function AdminLayout() {
   const location = useLocation();
   const [open, setOpen] = useState(false);
   if (loading) return <PageLoader />;
-  if (!user) return <Navigate to={`/auth?next=${encodeURIComponent(location.pathname)}`} replace />;
+  if (!user) return <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />;
   if (!isAdmin) {
     return (
       <div className="container-x grid min-h-[60vh] place-items-center text-center">
@@ -52,7 +53,7 @@ export default function AdminLayout() {
         <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-mist">Admin</p>
         <div className="mt-6">{nav}</div>
         <p className="mt-8 truncate text-[12px] text-mist">{profile?.full_name || user.email}</p>
-        <NavLink to="/" className="mt-1 block text-[12px] font-semibold text-rose">← Back to store</NavLink>
+        <a href={STORE_URL} className="mt-1 block text-[12px] font-semibold text-rose">← Back to store</a>
       </aside>
       <div className="min-w-0">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-white/90 px-4 backdrop-blur lg:hidden">

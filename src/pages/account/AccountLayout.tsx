@@ -1,6 +1,7 @@
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Heart, LayoutDashboard, LogOut, MapPin, Package, Sparkles, Star, Tag, User } from 'lucide-react';
 import { useAuth } from '@/store/auth';
+import { ADMIN_URL } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { PageLoader } from '@/components/ui/Spinner';
 
@@ -29,7 +30,7 @@ export default function AccountLayout() {
           <h1 className="mt-1 text-[2.2rem] sm:text-[2.8rem]">Hello, {profile?.full_name?.split(' ')[0] || 'there'}.</h1>
         </div>
         <div className="flex gap-2">
-          {isAdmin && <NavLink to="/admin" className="rounded-full bg-blush px-4 py-2 text-sm font-semibold text-rose-deep">Admin dashboard</NavLink>}
+          {isAdmin && ADMIN_URL && <a href={ADMIN_URL} className="rounded-full bg-blush px-4 py-2 text-sm font-semibold text-rose-deep">Admin dashboard</a>}
           <button type="button" onClick={async () => { await signOut(); navigate('/'); }} className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-semibold hover:border-rose hover:text-rose"><LogOut size={14} /> Sign out</button>
         </div>
       </div>

@@ -13,7 +13,7 @@ import { QuickView } from '@/components/product/QuickView';
 import { Toaster } from '@/components/ui/Toaster';
 import { PageLoader } from '@/components/ui/Spinner';
 
-// Route-level code splitting: the admin bundle never ships to shoppers.
+// Route-level code splitting. The admin back-office is a separate app (src/apps/AdminApp.tsx).
 const Home = lazy(() => import('@/pages/Home'));
 const Catalog = lazy(() => import('@/pages/Catalog'));
 const Product = lazy(() => import('@/pages/Product'));
@@ -36,22 +36,6 @@ const MyReviews = lazy(() => import('@/pages/account/Misc').then((m) => ({ defau
 const Addresses = lazy(() => import('@/pages/account/Misc').then((m) => ({ default: m.Addresses })));
 const Profile = lazy(() => import('@/pages/account/Misc').then((m) => ({ default: m.Profile })));
 
-const AdminLayout = lazy(() => import('@/pages/admin/AdminLayout'));
-const AdminDashboard = lazy(() => import('@/pages/admin/Dashboard'));
-const AdminProducts = lazy(() => import('@/pages/admin/Products').then((m) => ({ default: m.AdminProducts })));
-const AdminProductEditor = lazy(() => import('@/pages/admin/Products').then((m) => ({ default: m.AdminProductEditor })));
-const AdminCategories = lazy(() => import('@/pages/admin/Catalog'));
-const AdminOrders = lazy(() => import('@/pages/admin/Orders').then((m) => ({ default: m.AdminOrders })));
-const AdminOrderDetail = lazy(() => import('@/pages/admin/Orders').then((m) => ({ default: m.AdminOrderDetail })));
-const AdminCustomers = lazy(() => import('@/pages/admin/Customers').then((m) => ({ default: m.AdminCustomers })));
-const AdminCustomerDetail = lazy(() => import('@/pages/admin/Customers').then((m) => ({ default: m.AdminCustomerDetail })));
-const AdminCoupons = lazy(() => import('@/pages/admin/Coupons'));
-const AdminLoyalty = lazy(() => import('@/pages/admin/Programs').then((m) => ({ default: m.AdminLoyalty })));
-const AdminGifts = lazy(() => import('@/pages/admin/Programs').then((m) => ({ default: m.AdminGifts })));
-const AdminReviews = lazy(() => import('@/pages/admin/Moderation').then((m) => ({ default: m.AdminReviews })));
-const AdminInventory = lazy(() => import('@/pages/admin/Moderation').then((m) => ({ default: m.AdminInventory })));
-const AdminAnalytics = lazy(() => import('@/pages/admin/Settings').then((m) => ({ default: m.AdminAnalytics })));
-const AdminSettings = lazy(() => import('@/pages/admin/Settings').then((m) => ({ default: m.AdminSettings })));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -113,7 +97,7 @@ function StorefrontLayout() {
   );
 }
 
-/** Checkout and admin run without the storefront chrome. */
+/** Checkout runs without the storefront chrome. */
 function BareLayout() {
   useCartSync();
   return (
@@ -125,7 +109,7 @@ function BareLayout() {
   );
 }
 
-export default function App() {
+export default function StoreApp() {
   return (
     <>
       <ScrollToTop />
@@ -159,23 +143,6 @@ export default function App() {
         </Route>
         <Route element={<BareLayout />}>
           <Route path="/checkout" element={<Checkout />} />
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="products" element={<AdminProducts />} />
-            <Route path="products/:id" element={<AdminProductEditor />} />
-            <Route path="categories" element={<AdminCategories />} />
-            <Route path="orders" element={<AdminOrders />} />
-            <Route path="orders/:id" element={<AdminOrderDetail />} />
-            <Route path="customers" element={<AdminCustomers />} />
-            <Route path="customers/:id" element={<AdminCustomerDetail />} />
-            <Route path="coupons" element={<AdminCoupons />} />
-            <Route path="loyalty" element={<AdminLoyalty />} />
-            <Route path="gifts" element={<AdminGifts />} />
-            <Route path="reviews" element={<AdminReviews />} />
-            <Route path="inventory" element={<AdminInventory />} />
-            <Route path="analytics" element={<AdminAnalytics />} />
-            <Route path="settings" element={<AdminSettings />} />
-          </Route>
         </Route>
       </Routes>
       <Toaster />

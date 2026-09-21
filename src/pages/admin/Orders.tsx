@@ -36,7 +36,7 @@ export function AdminOrders() {
           <Table head={['Order', 'Customer', 'Items', 'Status', 'Payment', 'Total', 'Placed']}>
             {data.items.map((o) => (
               <tr key={o.id} className="hover:bg-ivory">
-                <td className="px-4 py-3"><Link to={`/admin/orders/${o.id}`} className="font-semibold hover:text-rose">{o.order_number}</Link></td>
+                <td className="px-4 py-3"><Link to={`/orders/${o.id}`} className="font-semibold hover:text-rose">{o.order_number}</Link></td>
                 <td className="px-4 py-3">{o.customer}<span className="block text-[11px] text-mist">{o.email}</span></td>
                 <td className="px-4 py-3">{o.item_count}</td>
                 <td className="px-4 py-3"><StatusPill status={o.status} label={ORDER_STATUS_LABEL[o.status]} /></td>
@@ -75,7 +75,7 @@ export function AdminOrderDetail() {
   const next = NEXT[order.status];
   return (
     <div>
-      <AdminHeader title={order.order_number} description={`${formatDateTime(order.placed_at)} · ${METHOD_LABEL[order.payment_method]} · ${PAYMENT_LABEL[order.payment_status]}`} action={<Button variant="ghost" to="/admin/orders">Back to orders</Button>} />
+      <AdminHeader title={order.order_number} description={`${formatDateTime(order.placed_at)} · ${METHOD_LABEL[order.payment_method]} · ${PAYMENT_LABEL[order.payment_status]}`} action={<Button variant="ghost" to="/orders">Back to orders</Button>} />
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="space-y-6">
           <Timeline order={order} />
@@ -123,7 +123,7 @@ export function AdminOrderDetail() {
           </section>
           <section className="rounded-2xl border border-line bg-white p-5 text-sm">
             <h3 className="mb-2 text-xl">Customer</h3>
-            <Link to={`/admin/customers/${order.customer.id}`} className="font-semibold hover:text-rose">{order.customer.name || order.customer.email}</Link>
+            <Link to={`/customers/${order.customer.id}`} className="font-semibold hover:text-rose">{order.customer.name || order.customer.email}</Link>
             <p className="text-ink-soft">{order.customer.email}{order.customer.phone ? ` · ${order.customer.phone}` : ''}</p>
             <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-mist">Ship to</p>
             <p>{order.shipping_address.full_name} · {order.shipping_address.phone}</p>

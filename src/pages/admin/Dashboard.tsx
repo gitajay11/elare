@@ -37,16 +37,16 @@ export default function AdminDashboard() {
           {data.low_stock_items.length ? (
             <ul className="divide-y divide-line text-[13px]">{data.low_stock_items.map((i) => <li key={i.variant_id} className="flex justify-between py-2"><span>{i.product} <span className="text-mist">· {i.variant}</span></span><span className={i.quantity === 0 ? 'font-semibold text-danger' : 'font-semibold text-rose'}>{i.quantity} left</span></li>)}</ul>
           ) : <p className="text-sm text-mist">All variants are above their thresholds.</p>}
-          <Link to="/admin/inventory" className="mt-3 inline-block text-[12px] font-semibold uppercase tracking-[0.12em] text-rose">Manage inventory</Link>
+          <Link to="/inventory" className="mt-3 inline-block text-[12px] font-semibold uppercase tracking-[0.12em] text-rose">Manage inventory</Link>
         </section>
       </div>
 
       <section className="mt-6">
-        <div className="mb-3 flex items-center justify-between"><h3 className="text-xl">Recent orders</h3><Link to="/admin/orders" className="text-[12px] font-semibold uppercase tracking-[0.12em] text-rose">All orders</Link></div>
+        <div className="mb-3 flex items-center justify-between"><h3 className="text-xl">Recent orders</h3><Link to="/orders" className="text-[12px] font-semibold uppercase tracking-[0.12em] text-rose">All orders</Link></div>
         <Table head={['Order', 'Customer', 'Status', 'Payment', 'Total', 'Placed']}>
           {data.recent_orders.map((o) => (
             <tr key={o.id} className="hover:bg-ivory">
-              <td className="px-4 py-3"><Link to={`/admin/orders/${o.id}`} className="font-semibold hover:text-rose">{o.order_number}</Link></td>
+              <td className="px-4 py-3"><Link to={`/orders/${o.id}`} className="font-semibold hover:text-rose">{o.order_number}</Link></td>
               <td className="px-4 py-3">{o.customer || o.email}</td>
               <td className="px-4 py-3"><StatusPill status={o.status} label={ORDER_STATUS_LABEL[o.status]} /></td>
               <td className="px-4 py-3 capitalize">{o.payment_status}</td>

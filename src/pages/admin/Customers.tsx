@@ -26,7 +26,7 @@ export function AdminCustomers() {
           <Table head={['Customer', 'Contact', 'Orders', 'Lifetime spend', 'Points', 'Status', 'Joined']}>
             {data.items.map((c) => (
               <tr key={c.id} className="hover:bg-ivory">
-                <td className="px-4 py-3"><Link to={`/admin/customers/${c.id}`} className="font-semibold hover:text-rose">{c.full_name || '—'}</Link>{c.role === 'admin' && <Badge tone="ink" className="ml-2">Admin</Badge>}</td>
+                <td className="px-4 py-3"><Link to={`/customers/${c.id}`} className="font-semibold hover:text-rose">{c.full_name || '—'}</Link>{c.role === 'admin' && <Badge tone="ink" className="ml-2">Admin</Badge>}</td>
                 <td className="px-4 py-3 text-ink-soft">{c.email}<span className="block text-[11px] text-mist">{c.phone}</span></td>
                 <td className="px-4 py-3">{c.order_count}</td>
                 <td className="px-4 py-3 font-medium">{money(c.lifetime_spend)}</td>
@@ -60,7 +60,7 @@ export function AdminCustomerDetail() {
   const suspended = p.status === 'suspended';
   return (
     <div>
-      <AdminHeader title={p.full_name || p.email} description={`${p.email}${p.phone ? ` · ${p.phone}` : ''} · joined ${formatDate(p.created_at)}`} action={<div className="flex gap-2"><Button variant="ghost" to="/admin/customers">Back</Button><Button variant={suspended ? 'primary' : 'danger'} size="sm" onClick={() => setConfirmStatus(true)}>{suspended ? 'Reactivate account' : 'Suspend account'}</Button></div>} />
+      <AdminHeader title={p.full_name || p.email} description={`${p.email}${p.phone ? ` · ${p.phone}` : ''} · joined ${formatDate(p.created_at)}`} action={<div className="flex gap-2"><Button variant="ghost" to="/customers">Back</Button><Button variant={suspended ? 'primary' : 'danger'} size="sm" onClick={() => setConfirmStatus(true)}>{suspended ? 'Reactivate account' : 'Suspend account'}</Button></div>} />
       <div className="grid gap-3 sm:grid-cols-4">
         <StatCard label="Lifetime spend" value={money(data.lifetime_spend)} tone="rose" />
         <StatCard label="Orders" value={String(data.orders.length)} />
@@ -73,7 +73,7 @@ export function AdminCustomerDetail() {
             <h3 className="mb-3 text-xl">Orders</h3>
             <Table head={['Order', 'Status', 'Payment', 'Total', 'Placed']}>
               {data.orders.map((o) => (
-                <tr key={o.id} className="hover:bg-ivory"><td className="px-4 py-2.5"><Link to={`/admin/orders/${o.id}`} className="font-semibold hover:text-rose">{o.order_number}</Link></td><td className="px-4 py-2.5"><StatusPill status={o.status} label={ORDER_STATUS_LABEL[o.status]} /></td><td className="px-4 py-2.5 capitalize">{o.payment_status}</td><td className="px-4 py-2.5">{money(o.grand_total)}</td><td className="px-4 py-2.5 text-mist">{formatDate(o.placed_at)}</td></tr>
+                <tr key={o.id} className="hover:bg-ivory"><td className="px-4 py-2.5"><Link to={`/orders/${o.id}`} className="font-semibold hover:text-rose">{o.order_number}</Link></td><td className="px-4 py-2.5"><StatusPill status={o.status} label={ORDER_STATUS_LABEL[o.status]} /></td><td className="px-4 py-2.5 capitalize">{o.payment_status}</td><td className="px-4 py-2.5">{money(o.grand_total)}</td><td className="px-4 py-2.5 text-mist">{formatDate(o.placed_at)}</td></tr>
               ))}
               {!data.orders.length && <tr><td colSpan={5} className="px-4 py-6 text-center text-mist">No orders yet.</td></tr>}
             </Table>
@@ -84,7 +84,7 @@ export function AdminCustomerDetail() {
           </section>
           <section className="rounded-2xl border border-line bg-white p-5">
             <h3 className="mb-3 text-xl">Wishlist</h3>
-            {data.wishlist.length ? <div className="flex flex-wrap gap-2">{data.wishlist.map((w) => <Link key={w.id} to={`/admin/products/${w.id}`} className="rounded-full bg-blush px-3 py-1 text-[13px] font-medium text-rose-deep">{w.name}</Link>)}</div> : <p className="text-sm text-mist">Empty.</p>}
+            {data.wishlist.length ? <div className="flex flex-wrap gap-2">{data.wishlist.map((w) => <Link key={w.id} to={`/products/${w.id}`} className="rounded-full bg-blush px-3 py-1 text-[13px] font-medium text-rose-deep">{w.name}</Link>)}</div> : <p className="text-sm text-mist">Empty.</p>}
           </section>
         </div>
         <div className="space-y-6">

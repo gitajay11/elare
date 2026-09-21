@@ -1,6 +1,6 @@
 # Élaré Beauty
 
-Production-ready full-stack e-commerce for a premium makeup brand.
+Production-ready full-stack e-commerce for a premium makeup brand — **two separate websites** (customer storefront and admin back-office) built from one codebase, sharing components, the API layer and the database.
 
 - **Storefront** — React 19 · TypeScript · Vite 7 · Tailwind CSS 4 · Framer Motion · TanStack Query · Zustand
 - **Backend** — Supabase (Postgres + Auth + Storage + Edge Functions). All business rules live in SQL functions with Row Level Security.
@@ -27,7 +27,18 @@ npm run dev:local
    update public.profiles set role = 'admin' where email = 'you@example.com';
    ```
 4. In Authentication → URL configuration add your site URL and `https://<your-site>/auth/callback` as a redirect URL.
-5. `npm run dev` / `npm run build`.
+5. `npm run dev` (storefront) and `npm run dev:admin` (back-office, port 5174). Builds: `npm run build:store`, `npm run build:admin`.
+
+## Two sites, one repo
+
+| | Storefront | Admin |
+|---|---|---|
+| Entry | `src/apps/StoreApp.tsx` | `src/apps/AdminApp.tsx` |
+| Build | `npm run build:store` (or `VITE_APP=store npm run build`) | `npm run build:admin` (or `VITE_APP=admin npm run build`) |
+| Routes | `/`, `/shop`, `/product/:slug`, `/checkout`, `/account/*` | `/login`, `/`, `/products`, `/orders`, `/customers`, … |
+| Env | `VITE_ADMIN_URL` (shows an "Admin dashboard" link to admins) | `VITE_STORE_URL` ("Back to store", product previews) |
+
+The app is chosen at build time from the Vite mode, so each bundle contains only its own pages. Deploy them as **two Vercel projects from the same repository**: both use `npm run build`; the admin project sets the environment variable `VITE_APP=admin`. Add both domains to Supabase Auth → URL configuration. `npm run dev:local` starts both sites (storefront :5173, admin :5174) against the local PGlite API.
 
 ### Razorpay (online payments)
 

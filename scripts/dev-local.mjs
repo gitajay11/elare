@@ -351,9 +351,16 @@ server.listen(PORT, () => {
   console.log(`[api] anon key: ${ANON_KEY}  ·  first sign-up becomes admin${ADMIN_EMAIL ? ` (or ${ADMIN_EMAIL})` : ''}\n`);
   if (process.argv.includes('--api-only')) return;
   const webPort = Number(process.env.PORT || 5173);
-  const vite = spawn(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['vite', '--host', '--port', String(webPort)], {
-    stdio: 'inherit', shell: process.platform === 'win32',
-    env: { ...process.env, VITE_SUPABASE_URL: `http://localhost:${PORT}`, VITE_SUPABASE_ANON_KEY: ANON_KEY, VITE_SITE_URL: `http://localhost:${webPort}` },
-  });
-  vite.on('exit', (code) => process.exit(code ?? 0));
+  const adminPort = Number(process.env.ADMIN_PORT || webPort + 1);
+  const env = {
+    ...process.env, VITE_SUPABASE_URL: `http://localhost:${PORT}`, VITE_SUPABASE_ANON_KEY: ANON_KEY,
+    VITE_SITE_URL: `http://localhost:${webPort}`, VITE_STORE_URL: `http://localhost:${webPort}`, VITE_ADMIN_URL: `http://localhost:${adminPort}`,
+  };
+  const spawnVite = (args) => spawn(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['vite', '--host', ...args], { stdio: 'inherit', shell: process.platform === 'win32', env });
+  const store = spawnVite(['--port', String(webPort)]);
+  const admin = spawnVite(['--mode', 'admin', '--port', String(adminPort)]);
+  console.log(`[web] storefront → http://localhost:${webPort}   admin → http://localhost:${adminPort}`);
+  const stop = (code) => { store.kill(); admin.kill(); process.exit(code ?? 0); };
+  store.on('exit', stop);
+  admin.on('exit', stop);
 });

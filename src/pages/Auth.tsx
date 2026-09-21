@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Seo } from '@/lib/seo';
 import { useAuth } from '@/store/auth';
 import { toast } from '@/store/ui';
-import { supabase } from '@/lib/supabase';
+import { supabase, APP } from '@/lib/supabase';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
 import { Logo } from '@/components/layout/Navbar';
@@ -13,12 +13,12 @@ import { PageLoader } from '@/components/ui/Spinner';
 
 type Mode = 'signin' | 'signup' | 'reset';
 
-export default function Auth() {
+export default function Auth({ adminMode = false }: { adminMode?: boolean }) {
   const [sp] = useSearchParams();
   const { user, loading, signIn, signUp, resetPassword, configured } = useAuth();
   const navigate = useNavigate();
-  const next = sp.get('next') || '/account';
-  const [mode, setMode] = useState<Mode>((sp.get('mode') as Mode) || 'signin');
+  const next = sp.get('next') || (adminMode ? '/' : '/account');
+  const [mode, setMode] = useState<Mode>(adminMode ? 'signin' : (sp.get('mode') as Mode) || 'signin');
   const [form, setForm] = useState({ email: '', password: '', name: '', phone: '' });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -59,7 +59,8 @@ export default function Auth() {
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="mx-auto w-full max-w-md rounded-[28px] border border-line bg-white p-7 shadow-soft sm:p-9">
         <div className="mb-6 flex justify-center"><Logo /></div>
         {!configured && <p className="mb-4 rounded-xl bg-danger/10 px-4 py-3 text-[13px] text-danger">Supabase isn’t configured yet — copy <code>.env.example</code> to <code>.env</code> and add your project keys.</p>}
-        {mode !== 'reset' && (
+        {adminMode && mode !== 'reset' && <><h1 className="text-center text-3xl">Team sign in</h1><p className="mb-6 mt-1 text-center text-[13px] text-mist">Admin access is granted by an existing administrator.</p></>}
+        {mode !== 'reset' && !adminMode && (
           <Tabs tabs={[{ value: 'signin', label: 'Sign in' }, { value: 'signup', label: 'Create account' }]} value={mode as 'signin' | 'signup'} onChange={(v) => setMode(v)} className="mb-6 justify-center" />
         )}
         {mode === 'reset' && <h1 className="mb-2 text-center text-3xl">Reset your password</h1>}
@@ -93,13 +94,13 @@ export function AuthCallback() {
   const navigate = useNavigate();
   const [status, setStatus] = useState('Signing you in…');
   useEffect(() => {
-    const next = sp.get('next') || '/account';
+    const next = sp.get('next') || (APP === 'admin' ? '/' : '/account');
     const { data } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') navigate('/account/profile?reset=1', { replace: true });
+      if (event === 'PASSWORD_RECOVERY') navigate(APP === 'admin' ? '/' : '/account/profile?reset=1', { replace: true });
       else if (event === 'SIGNED_IN') navigate(next, { replace: true });
     });
     supabase.auth.getSession().then(({ data: s }) => { if (s.session) navigate(next, { replace: true }); else setStatus('Waiting for confirmation…'); });
-    const t = setTimeout(() => navigate('/auth', { replace: true }), 8000);
+    const t = setTimeout(() => navigate(APP === 'admin' ? '/login' : '/auth', { replace: true }), 8000);
     return () => { data.subscription.unsubscribe(); clearTimeout(t); };
   }, [navigate, sp]);
   return <div className="grid min-h-[60vh] place-items-center text-sm text-mist">{status}</div>;

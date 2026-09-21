@@ -6,6 +6,7 @@ import { adminApi, type AdminProductPayload, type AdminProductSave } from '@/lib
 import { money, formatDate } from '@/lib/format';
 import { cn, slugify } from '@/lib/utils';
 import { toast } from '@/store/ui';
+import { STORE_URL } from '@/lib/supabase';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea, Select, Toggle } from '@/components/ui/Field';
 import { Badge, Skeleton, Swatch } from '@/components/ui/Primitives';
@@ -23,7 +24,7 @@ export function AdminProducts() {
   const del = useMutation({ mutationFn: adminApi.deleteProduct, onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-products'] }); setRemoving(null); toast({ title: 'Product removed' }); }, onError: (e) => toast({ title: 'Could not delete', description: (e as Error).message, variant: 'error' }) });
   return (
     <div>
-      <AdminHeader title="Products" description="Publish, price and stock every product and its shades." action={<Button to="/admin/products/new" icon={<Plus size={16} />}>New product</Button>} />
+      <AdminHeader title="Products" description="Publish, price and stock every product and its shades." action={<Button to="/products/new" icon={<Plus size={16} />}>New product</Button>} />
       <div className="mb-4 flex flex-wrap gap-2">
         <input value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} placeholder="Search products…" className="h-10 w-64 rounded-full border border-line bg-white px-4 text-sm outline-none focus:border-rose" />
         <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="h-10 rounded-full border border-line bg-white px-4 text-sm outline-none"><option value="">All</option><option value="published">Published</option><option value="draft">Draft</option><option value="low_stock">Low stock</option></select>
@@ -33,7 +34,7 @@ export function AdminProducts() {
           <Table head={['Product', 'Category', 'Price', 'Stock', 'Sold', 'Rating', 'Status', '']}>
             {data.items.map((p) => (
               <tr key={p.id} className="hover:bg-ivory">
-                <td className="px-4 py-2.5"><Link to={`/admin/products/${p.id}`} className="flex items-center gap-3 font-semibold hover:text-rose"><span className="h-11 w-9 overflow-hidden rounded-md bg-nude">{p.image && <img src={p.image} alt="" className="h-full w-full object-cover" />}</span><span>{p.name}<span className="block text-[11px] font-normal text-mist">{p.variant_count} variants · {formatDate(p.updated_at)}</span></span></Link></td>
+                <td className="px-4 py-2.5"><Link to={`/products/${p.id}`} className="flex items-center gap-3 font-semibold hover:text-rose"><span className="h-11 w-9 overflow-hidden rounded-md bg-nude">{p.image && <img src={p.image} alt="" className="h-full w-full object-cover" />}</span><span>{p.name}<span className="block text-[11px] font-normal text-mist">{p.variant_count} variants · {formatDate(p.updated_at)}</span></span></Link></td>
                 <td className="px-4 py-2.5 text-ink-soft">{p.category}{p.subcategory ? ` / ${p.subcategory}` : ''}</td>
                 <td className="px-4 py-2.5">{money(p.price)}{p.compare_at_price && <s className="ml-1 text-mist">{money(p.compare_at_price)}</s>}</td>
                 <td className={cn('px-4 py-2.5 font-medium', p.stock === 0 ? 'text-danger' : p.stock <= 5 ? 'text-rose' : '')}>{p.stock}</td>
@@ -101,7 +102,7 @@ export function AdminProductEditor() {
       qc.invalidateQueries({ queryKey: ['admin-product', r.product.id] });
       qc.invalidateQueries({ queryKey: ['home'] });
       toast({ title: 'Product saved', variant: 'success' });
-      if (isNew) navigate(`/admin/products/${r.product.id}`, { replace: true });
+      if (isNew) navigate(`/products/${r.product.id}`, { replace: true });
     },
     onError: (e) => toast({ title: 'Could not save', description: (e as Error).message, variant: 'error' }),
   });
@@ -140,7 +141,7 @@ export function AdminProductEditor() {
 
   return (
     <form onSubmit={submit}>
-      <AdminHeader title={isNew ? 'New product' : product.name || 'Edit product'} description={isNew ? 'Create the product, its shades, variants and stock in one go.' : `/product/${product.slug}`} action={<div className="flex gap-2"><Button variant="ghost" to="/admin/products">Back</Button>{!isNew && <Button variant="outline" href={`/product/${product.slug}`}>View</Button>}<Button type="submit" loading={save.isPending}>Save</Button></div>} />
+      <AdminHeader title={isNew ? 'New product' : product.name || 'Edit product'} description={isNew ? 'Create the product, its shades, variants and stock in one go.' : `/product/${product.slug}`} action={<div className="flex gap-2"><Button variant="ghost" to="/products">Back</Button>{!isNew && <Button variant="outline" href={`${STORE_URL}/product/${product.slug}`}>View</Button>}<Button type="submit" loading={save.isPending}>Save</Button></div>} />
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
           <Card title="Basics">
