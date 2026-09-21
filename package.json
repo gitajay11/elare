@@ -3,7 +3,9 @@
   "private": true,
   "version": "2.0.0",
   "packageManager": "pnpm@12.5.1",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
@@ -14,7 +16,8 @@
     "api:dev": "pnpm --filter @elare/api dev",
     "api:build": "pnpm --filter @elare/api build",
     "storefront:dev": "pnpm --filter @elare/storefront dev",
-    "admin:dev": "pnpm --filter @elare/admin dev"
+    "admin:dev": "pnpm --filter @elare/admin dev",
+    "vercel-build": "node scripts/vercel-build.mjs"
   },
   "devDependencies": {
     "@neon/config": "^1.7.2",

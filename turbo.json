@@ -1,9 +1,11 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "globalDependencies": [".env", ".env.local"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": ["VITE_*", "ELARE_APP", "VERCEL_ENV", "VERCEL_URL"],
       "outputs": ["dist/**", "dist-functions/**"]
     },
     "typecheck": {

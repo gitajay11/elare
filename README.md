@@ -97,10 +97,16 @@ visible to the admin site; non-admins are refused there (and by the API).
 | Target | How |
 |---|---|
 | Database, Auth, Storage, API | `neon deploy --env .env.local` |
-| Storefront (`elare.example.com`) | Vercel project from this repo, root `apps/storefront` (`vercel.json` runs `pnpm --filter @elare/storefront build`) |
-| Admin (`admin.elare.example.com`) | second Vercel project, root `apps/admin` |
+| Storefront (`elare.example.com`) | Vercel project from this repo; set the env var `ELARE_APP=storefront` |
+| Admin (`admin.elare.example.com`) | second Vercel project from this repo; set `ELARE_APP=admin` |
 
-Set the `VITE_*` variables on each Vercel project; each bundle contains only its own pages.
+Both projects can keep the default Root Directory (repo root): the root
+`vercel.json` runs `pnpm vercel-build`, which builds only the site named by
+`ELARE_APP` and puts it in `dist/`. Alternatively set Root Directory to
+`apps/storefront` / `apps/admin` and the `vercel.json` inside that folder is
+used instead. Set `VITE_NEON_URL`, `VITE_API_URL`, `VITE_SITE_URL`,
+`VITE_STORE_URL`, `VITE_ADMIN_URL` on each project (they are part of the
+Turbo cache key, so a change re-builds). Each bundle contains only its own pages.
 
 ## Trust boundaries
 

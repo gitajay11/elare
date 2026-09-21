@@ -98,8 +98,9 @@ Turborepo.
 
 * **Database / Auth / Storage / API**: `neon deploy --env .env.local` (from
   `neon.ts`). The API Function bundles `apps/api/src/server.ts`.
-* **Storefront**: Vercel project rooted at the repo, `apps/storefront/vercel.json`
-  (build `pnpm --filter @elare/storefront build`), custom domain.
-* **Admin**: second Vercel project, `apps/admin/vercel.json`, the subdomain.
+* **Storefront** / **Admin**: two Vercel projects from this repo with
+  `ELARE_APP=storefront` / `ELARE_APP=admin` (root `vercel.json` →
+  `scripts/vercel-build.mjs`), or Root Directory `apps/<site>` to use the
+  per-app `vercel.json`.
 * Set `ALLOWED_ORIGINS` on the Function to both site origins and register both
   as trusted origins in Neon Auth.
