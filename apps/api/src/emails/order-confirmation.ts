@@ -250,9 +250,7 @@ export function renderHtml(o: OrderEmail): string {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr><td style="height:6px;background:linear-gradient(90deg,${C.blush},${C.rose},${C.champagne});font-size:0;line-height:0;">&nbsp;</td></tr>
       <tr><td class="pad" align="center" style="padding:40px 44px 8px;">
-        <div style="display:inline-block;width:64px;height:64px;border-radius:50%;background:${C.blush};line-height:64px;text-align:center;">
-          <span style="display:inline-block;width:20px;height:11px;border-left:3px solid ${C.rose};border-bottom:3px solid ${C.rose};transform:rotate(-45deg) translate(2px,-3px);"></span>
-        </div>
+        <img src="${esc(o.storeUrl)}/logo-email.png" width="72" height="72" alt="Élaré" style="display:inline-block;width:72px;height:72px;border:0;" />
         <div style="font-family:${SANS};font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:${C.rose};font-weight:700;margin-top:22px;">Order ${esc(o.orderNumber)}</div>
         <h1 class="h1" style="font-family:${SERIF};font-size:40px;line-height:1.08;font-weight:500;color:${C.ink};margin:12px 0 0;letter-spacing:-0.01em;">Thank you, ${esc(firstName(o.customerName))}.</h1>
         <p style="font-family:${SANS};font-size:15px;line-height:1.6;color:${C.inkSoft};margin:14px 0 0;max-width:420px;">${heading} We're preparing it with care and will email you at every step — packed, shipped, delivered.</p>

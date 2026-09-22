@@ -3,7 +3,7 @@ import { signInPath } from '@/lib/routes';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Check, ChevronLeft, CreditCard, Lock, MapPin, Truck, Wallet } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, CreditCard, Lock, MapPin, Truck, Wallet } from 'lucide-react';
 import { api } from '@/lib/api';
 import { type Address } from '@elare/types';
 import { Seo, useAuth, Button, Input, Checkbox, PageLoader } from '@elare/ui';
@@ -13,7 +13,7 @@ import { toast } from '@/lib/ui-store';
 import { useQuote } from '@/lib/hooks';
 import { Logo } from '@/components/layout/Navbar';
 import { CartLines, CouponBox, GiftProgress, PointsBox, Totals, useDisplayLines } from '@/features/cart/CartParts';
-import { RAZORPAY_ENABLED, payWithRazorpay } from './razorpay';
+import { CLEAR_CART_FLAG, RAZORPAY_ENABLED, payWithRazorpay } from './razorpay';
 
 type Step = 'address' | 'delivery' | 'payment';
 const STEPS: { key: Step; label: string; icon: React.ReactNode }[] = [
@@ -21,8 +21,6 @@ const STEPS: { key: Step; label: string; icon: React.ReactNode }[] = [
   { key: 'delivery', label: 'Delivery', icon: <Truck size={14} /> },
   { key: 'payment', label: 'Payment', icon: <CreditCard size={14} /> },
 ];
-/** sessionStorage key: order id whose confirmation page should empty the bag. */
-export const CLEAR_CART_FLAG = 'elare:clear-cart-for';
 const INDIAN_STATES = ['Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Delhi', 'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jammu & Kashmir', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Chandigarh', 'Puducherry', 'Ladakh'];
 
 const emptyAddress = { full_name: '', phone: '', line1: '', line2: '', city: '', state: '', postal_code: '' };
@@ -57,6 +55,8 @@ function CheckoutFlow({ userEmail, userName, userPhone }: { userEmail: string; u
   const [method, setMethod] = useState<'razorpay' | 'cod'>(RAZORPAY_ENABLED ? 'razorpay' : 'cod');
   const [note, setNote] = useState('');
   const [placing, setPlacing] = useState(false);
+  // Phones: the summary sits above the steps, collapsed to one line until tapped.
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const [pendingOrder, setPendingOrder] = useState<{ order_id: string; order_number: string } | null>(null);
 
   const { data: addresses } = useQuery({ queryKey: ['addresses'], queryFn: api.addresses });
@@ -149,7 +149,7 @@ function CheckoutFlow({ userEmail, userName, userPhone }: { userEmail: string; u
         </div>
       </header>
 
-      <div className="container-x grid gap-10 py-8 lg:grid-cols-[1fr_400px] lg:gap-16 lg:py-12">
+      <div className="container-x grid gap-6 py-6 lg:grid-cols-[1fr_400px] lg:gap-16 lg:py-12">
         <div>
           <ol className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.14em]" aria-label="Checkout steps">
             {STEPS.map((s, i) => (
@@ -248,15 +248,21 @@ function CheckoutFlow({ userEmail, userName, userPhone }: { userEmail: string; u
             </motion.div>
         </div>
 
-        <aside className="lg:sticky lg:top-8 lg:self-start">
-          <div className="rounded-3xl border border-line bg-white p-5">
-            <p className="mb-2 font-display text-2xl">Order summary</p>
-            <GiftProgress quote={quote} className="mb-2" />
-            <CartLines lines={lines} compact />
-            <CouponBox quote={quote} className="mt-4" />
-            <Totals quote={quote} loading={quoting} className="mt-5" />
+        <aside className="order-first lg:order-none lg:sticky lg:top-8 lg:self-start">
+          <div className="rounded-3xl border border-line bg-white p-4 lg:p-5">
+            <button type="button" onClick={() => setSummaryOpen((o) => !o)} aria-expanded={summaryOpen} aria-controls="order-summary" className="flex w-full items-center justify-between gap-3 text-left lg:hidden">
+              <span className="font-display text-xl">Order summary <span className="font-sans text-[12.5px] text-mist">· {items.reduce((n, i) => n + i.quantity, 0)} item{items.reduce((n, i) => n + i.quantity, 0) === 1 ? '' : 's'}</span></span>
+              <span className="inline-flex items-center gap-2 font-semibold">{quote ? money(quote.total) : '—'}<ChevronDown size={16} className={cn('text-mist transition-transform', summaryOpen && 'rotate-180')} /></span>
+            </button>
+            <p className="mb-2 hidden font-display text-2xl lg:block">Order summary</p>
+            <div id="order-summary" className={cn('pt-4 lg:block lg:pt-0', summaryOpen ? 'block' : 'hidden')}>
+              <GiftProgress quote={quote} className="mb-2" />
+              <CartLines lines={lines} compact />
+              <CouponBox quote={quote} className="mt-4" />
+              <Totals quote={quote} loading={quoting} className="mt-5" />
+            </div>
           </div>
-          <PointsBox quote={quote} className="mt-4" />
+          <PointsBox quote={quote} className={cn('mt-4', summaryOpen ? 'block' : 'hidden lg:block')} />
         </aside>
       </div>
     </div>

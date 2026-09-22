@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ExternalLink, Package } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -7,7 +7,7 @@ import { Seo, Button, EmptyState, Skeleton, StatusPill, Swatch, Modal, Textarea,
 import { money, formatDate, formatDateTime, ORDER_STATUS_LABEL, PAYMENT_LABEL, METHOD_LABEL, imageUrl, cn } from '@elare/utils';
 import { toast } from '@/lib/ui-store';
 import NotFound from '@/app/NotFoundPage';
-import { payWithRazorpay } from '@/features/checkout/razorpay';
+import { payWithRazorpay, reconcilePayment } from '@/features/checkout/razorpay';
 
 export function OrdersList() {
   const [page, setPage] = useState(1);
@@ -38,7 +38,19 @@ export function OrdersList() {
 export function OrderDetail() {
   const { id = '' } = useParams();
   const qc = useQueryClient();
+  const [sp, setSp] = useSearchParams();
   const { data: order, isLoading } = useQuery({ queryKey: ['order', id], queryFn: () => api.order(id), refetchInterval: (q) => (q.state.data && !['delivered', 'cancelled', 'refunded'].includes(q.state.data.status) ? 30_000 : false) });
+  // Back from Razorpay's redirect flow after a failed attempt.
+  useEffect(() => {
+    if (sp.get('payment') !== 'failed') return;
+    toast({ title: 'Payment not completed', description: 'Your order is saved — you can retry below.', variant: 'error' });
+    setSp({}, { replace: true });
+  }, [sp, setSp]);
+  // A pending online order may already be paid (UPI app switch); check once.
+  useEffect(() => {
+    if (order?.status === 'pending' && order.payment_method === 'razorpay') reconcilePayment(id).then((paid) => { if (paid) qc.invalidateQueries({ queryKey: ['order', id] }); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?.status, id]);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
   const [reason, setReason] = useState('');

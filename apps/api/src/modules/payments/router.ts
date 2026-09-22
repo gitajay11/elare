@@ -19,6 +19,27 @@ const MIN_PAISE = 100;
 /** Checkout prefill wants E.164; addresses store bare 10-digit Indian mobiles. */
 const e164 = (phone?: string) => (phone && /^[6-9]\d{9}$/.test(phone) ? `+91${phone}` : phone);
 
+const storeUrl = () => (env('STORE_URL') || 'https://www.elarebeauty.store').replace(/\/$/, '');
+const apiUrl = (c: { req: { url: string } }) => new URL(c.req.url).origin;
+
+/**
+ * Asks Razorpay whether an order has a captured payment and settles it if so.
+ * This is what makes mobile/UPI flows self-healing: the app switch to a UPI
+ * app often kills the checkout page before its success handler can run.
+ */
+async function reconcile(orderId: string, providerOrderId: string): Promise<{ paid: boolean; already?: boolean }> {
+  const res = await fetch(`https://api.razorpay.com/v1/orders/${providerOrderId}/payments`, { headers: { Authorization: razorpayAuth() } });
+  if (!res.ok) return { paid: false };
+  const data = (await res.json()) as { items?: { id: string; status: string }[] };
+  const captured = data.items?.find((p) => p.status === 'captured');
+  if (!captured) return { paid: false };
+  const r = await asOwner((tx) => rpc<{ already: boolean }>(tx, 'mark_order_paid', {
+    p_order_id: orderId, p_provider_order_id: providerOrderId, p_provider_payment_id: captured.id, p_raw: { source: 'reconcile', payment: captured },
+  }));
+  if (!r.already) void sendOrderConfirmation(orderId);
+  return { paid: true, already: r.already };
+}
+
 /**
  * Razorpay. Settlement (`mark_order_paid` / `mark_payment_failed`) may only be
  * executed by the database owner, so this module is the one place that runs
@@ -37,6 +58,11 @@ export const paymentsRouter = new Hono<Env>()
       const [p] = await tx.select().from(payments).where(and(eq(payments.orderId, o.id), eq(payments.provider, 'razorpay')));
       return { ...o, providerOrderId: p?.providerOrderId ?? null };
     });
+
+    // A payment may already have gone through (mobile app switch, closed tab).
+    if (order.providerOrderId && (await reconcile(order.id, order.providerOrderId)).paid) {
+      throw new HttpError(409, 'This order is already paid.', 'already_paid');
+    }
 
     const amount = toPaise(order.grandTotal);
     if (!Number.isFinite(amount) || amount < MIN_PAISE) throw new HttpError(400, 'Online payment needs an order total of at least ₹1.');
@@ -67,7 +93,60 @@ export const paymentsRouter = new Hono<Env>()
       currency: order.currency || 'INR',
       order_number: order.orderNumber,
       prefill: { name: addr.full_name, email: addr.email, contact: e164(addr.phone) },
+      // Razorpay POSTs the result here when checkout runs in redirect mode (mobile).
+      callback_url: `${apiUrl(c)}/payments/razorpay/callback`,
     });
+  })
+
+  /** Customer-side check for orders still shown as pending: settles from Razorpay's records. */
+  .post('/razorpay/reconcile', requireAuth, async (c) => {
+    const { order_id } = await body(c, orderRefSchema);
+    const user = userOf(c);
+    const row = await asOwner(async (tx) => {
+      const [r] = await tx.select({ userId: orders.userId, paymentStatus: orders.paymentStatus, providerOrderId: payments.providerOrderId })
+        .from(orders).leftJoin(payments, and(eq(payments.orderId, orders.id), eq(payments.provider, 'razorpay'))).where(eq(orders.id, order_id));
+      if (!r) throw new HttpError(404, 'Order not found', 'not_found');
+      if (r.userId !== user.id) throw new HttpError(403, 'You do not have permission to do that.', 'forbidden');
+      return r;
+    });
+    if (row.paymentStatus === 'paid') return c.json({ paid: true, already: true });
+    if (!row.providerOrderId) return c.json({ paid: false });
+    return c.json(await reconcile(order_id, row.providerOrderId));
+  })
+
+  /**
+   * Redirect-mode return from Razorpay Checkout (a top-level form POST, so no
+   * JWT). The signature proves the result; the browser is then sent to the
+   * confirmation page, or back to the order with ?payment=failed.
+   */
+  .post('/razorpay/callback', async (c) => {
+    const form = await c.req.parseBody();
+    const str = (k: string) => (typeof form[k] === 'string' ? (form[k] as string) : '');
+    const orderIdFor = async (providerOrderId: string) => {
+      const [p] = await asOwner((tx) => tx.select({ orderId: payments.orderId }).from(payments).where(and(eq(payments.providerOrderId, providerOrderId), eq(payments.provider, 'razorpay'))));
+      return p?.orderId ?? null;
+    };
+    const razorpayOrderId = str('razorpay_order_id');
+    const paymentId = str('razorpay_payment_id');
+    const signature = str('razorpay_signature');
+    if (razorpayOrderId && paymentId && signature && safeEqual(hmac(need('RAZORPAY_KEY_SECRET'), `${razorpayOrderId}|${paymentId}`), signature)) {
+      const orderId = await orderIdFor(razorpayOrderId);
+      if (orderId) {
+        const r = await asOwner((tx) => rpc<{ already: boolean }>(tx, 'mark_order_paid', {
+          p_order_id: orderId, p_provider_order_id: razorpayOrderId, p_provider_payment_id: paymentId, p_raw: { source: 'checkout-callback', razorpay_payment_id: paymentId },
+        }));
+        if (!r.already) void sendOrderConfirmation(orderId);
+        return c.redirect(`${storeUrl()}/order/${orderId}/confirmation`, 303);
+      }
+    }
+    // Failure: Razorpay sends error[...] fields with the order id in error[metadata] (JSON).
+    let failedOrderId: string | null = null;
+    try {
+      const meta = JSON.parse(str('error[metadata]') || '{}') as { order_id?: string };
+      if (meta.order_id) failedOrderId = await orderIdFor(meta.order_id);
+    } catch { /* no metadata */ }
+    if (!failedOrderId && razorpayOrderId) failedOrderId = await orderIdFor(razorpayOrderId);
+    return c.redirect(failedOrderId ? `${storeUrl()}/account/orders/${failedOrderId}?payment=failed` : `${storeUrl()}/account/orders?payment=failed`, 303);
   })
 
   .post('/razorpay/verify', requireAuth, async (c) => {

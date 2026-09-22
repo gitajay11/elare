@@ -84,8 +84,9 @@ export const api = {
 
   // Payments ----------------------------------------------------------------
   razorpayOrder: (orderId: string) =>
-    http.post<{ key_id: string; razorpay_order_id: string; amount: number; currency: string; order_number: string; prefill: { name?: string; email?: string; contact?: string } }>(
+    http.post<{ key_id: string; razorpay_order_id: string; amount: number; currency: string; order_number: string; prefill: { name?: string; email?: string; contact?: string }; callback_url: string }>(
       '/payments/razorpay/order', { order_id: orderId }),
+  razorpayReconcile: (orderId: string) => http.post<{ paid: boolean; already?: boolean }>('/payments/razorpay/reconcile', { order_id: orderId }),
   razorpayVerify: (body: { order_id: string; razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) =>
     http.post<{ ok: boolean }>('/payments/razorpay/verify', body),
 

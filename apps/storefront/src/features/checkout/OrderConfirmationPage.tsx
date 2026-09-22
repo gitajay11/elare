@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -7,12 +7,23 @@ import { api } from '@/lib/api';
 import { Seo, Button, PageLoader } from '@elare/ui';
 import { money, METHOD_LABEL } from '@elare/utils';
 import { useCart } from '@/features/cart/store';
-import { CLEAR_CART_FLAG } from './CheckoutPage';
+import { CLEAR_CART_FLAG, reconcilePayment } from './razorpay';
 import NotFound from '@/app/NotFoundPage';
 
 export default function OrderConfirmation() {
   const { id = '' } = useParams();
-  const { data: order, isLoading } = useQuery({ queryKey: ['order', id], queryFn: () => api.order(id) });
+  const { data: order, isLoading, refetch } = useQuery({ queryKey: ['order', id], queryFn: () => api.order(id) });
+  // An online order can arrive here still "pending" when the payment completed
+  // in another app; ask the API to check Razorpay before showing "Almost there".
+  const [checking, setChecking] = useState(false);
+  useEffect(() => {
+    if (!order || order.status !== 'pending' || order.payment_method !== 'razorpay') return;
+    let cancelled = false;
+    setChecking(true);
+    reconcilePayment(id).then((paid) => { if (!cancelled && paid) return refetch(); }).finally(() => { if (!cancelled) setChecking(false); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?.status, id]);
   const clearCart = useCart((s) => s.clear);
   const qc = useQueryClient();
   // Empty the bag exactly once, for the order that was just placed from checkout.
@@ -23,7 +34,7 @@ export default function OrderConfirmation() {
       qc.invalidateQueries({ queryKey: ['quote'] });
     }
   }, [id, clearCart, qc]);
-  if (isLoading) return <PageLoader />;
+  if (isLoading || checking) return <PageLoader />;
   if (!order) return <NotFound />;
   const gift = order.items.find((i) => i.is_gift);
   return (
@@ -66,7 +77,9 @@ export default function OrderConfirmation() {
         {order.points_earned > 0 && <p className="mt-3 inline-flex items-center gap-2 text-sm text-ink-soft"><Sparkles size={14} className="text-rose" /> You’ll receive <b className="text-ink">{order.points_earned} Élaré points</b> once it’s delivered.</p>}
 
         <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-          <Button variant="glow" size="lg" to={`/account/orders/${order.id}`} icon={<Package size={16} />}>Track this order</Button>
+          {order.status === 'pending' && order.payment_method === 'razorpay'
+            ? <Button variant="glow" size="lg" to={`/account/orders/${order.id}`} icon={<Package size={16} />}>Complete payment</Button>
+            : <Button variant="glow" size="lg" to={`/account/orders/${order.id}`} icon={<Package size={16} />}>Track this order</Button>}
           <Button variant="outline" size="lg" to="/shop">Continue shopping</Button>
         </div>
         <p className="mt-6 text-[12.5px] text-mist">Need help? <Link to="/account/orders" className="underline">View your orders</Link>.</p>
