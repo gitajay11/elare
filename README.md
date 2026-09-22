@@ -8,6 +8,7 @@ storefront** (main domain), an **admin back-office** (subdomain) and one
 - **API** — Hono on Neon Functions (Node 24); verifies Neon Auth JWTs and runs every request as the caller inside Postgres (RLS applies)
 - **Data** — Neon Postgres with all business rules in SQL functions + RLS · Managed Better Auth · Object Storage (`media` bucket) · Drizzle for typed table access
 - **Payments** — Razorpay Standard Checkout: the API creates the Razorpay order (min ₹1), the storefront opens the modal, the API verifies the HMAC-SHA256 signature before settling; unpaid online orders can be paid later from the order page. Cash on delivery works with no gateway configured
+- **Email** — an order-confirmation email (nodemailer over SMTP, HTML + plain text) goes out the moment an order is confirmed: at placement for COD, after the payment is verified (or the webhook lands) for Razorpay. Sending is fire-and-forget; a mail failure never fails a checkout
 - **PWA** — both sites are installable (manifest + Workbox service worker via vite-plugin-pwa): app shell precached, images/fonts cached, API always live; new builds activate automatically on the next load. `pnpm icons` regenerates the icon sets. The admin has light / dark / auto themes (every design token is remapped under `data-theme="dark"`).
 
 ```
@@ -66,6 +67,7 @@ One `.env.local` at the repo root serves every workspace.
 | `AWS_*`, `MEDIA_BUCKET` | api | uploads |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | api | Razorpay server keys; the secret never leaves the API |
 | `VITE_RAZORPAY_KEY_ID` | storefront | the public key id again; shows "Pay online" at checkout (COD only when unset) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SUPPORT_EMAIL`, `STORE_URL` | api | order-confirmation email; optional (no SMTP_HOST = nothing sent). `pnpm --filter @elare/api email:preview` renders the template to `apps/api/dist-functions/email-preview.html` |
 
 ### 3. First admin
 

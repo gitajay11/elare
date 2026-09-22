@@ -7,6 +7,7 @@ import { env, need } from '../../lib/env';
 import { body, HttpError } from '../../lib/http';
 import { asOwner, rpc } from '../../lib/db';
 import { requireAuth, userOf, type Env } from '../../middleware';
+import { sendOrderConfirmation } from '../../emails';
 
 const orderRefSchema = z.object({ order_id: z.string().uuid() });
 const razorpayAuth = () => 'Basic ' + Buffer.from(`${need('RAZORPAY_KEY_ID')}:${need('RAZORPAY_KEY_SECRET')}`).toString('base64');
@@ -80,11 +81,12 @@ export const paymentsRouter = new Hono<Env>()
         .where(and(eq(payments.orderId, order_id), eq(payments.provider, 'razorpay')));
       if (!row || row.providerOrderId !== razorpay_order_id) throw new HttpError(400, 'Payment does not match this order.');
       if (row.userId !== user.id) throw new HttpError(403, 'You do not have permission to do that.', 'forbidden');
-      return rpc<Record<string, unknown>>(tx, 'mark_order_paid', {
+      return rpc<{ already: boolean }>(tx, 'mark_order_paid', {
         p_order_id: order_id, p_provider_order_id: razorpay_order_id, p_provider_payment_id: razorpay_payment_id,
         p_raw: { source: 'checkout-verify', razorpay_payment_id },
       });
     });
+    if (!result.already) void sendOrderConfirmation(order_id);
     return c.json({ ok: true, ...result });
   })
 
@@ -97,15 +99,19 @@ export const paymentsRouter = new Hono<Env>()
     const event = JSON.parse(raw) as { event: string; payload?: { payment?: { entity?: { id: string; order_id?: string } } } };
     const payment = event?.payload?.payment?.entity;
     if (!payment?.order_id) return c.json({ ok: true, ignored: true });
+    let confirmedOrderId: string | null = null;
     const handled = await asOwner(async (tx) => {
       const [p] = await tx.select({ orderId: payments.orderId }).from(payments).where(and(eq(payments.providerOrderId, payment.order_id!), eq(payments.provider, 'razorpay')));
       if (!p) return 'unknown order';
       if (event.event === 'payment.captured') {
-        await rpc(tx, 'mark_order_paid', { p_order_id: p.orderId, p_provider_order_id: payment.order_id, p_provider_payment_id: payment.id, p_raw: event });
+        const r = await rpc<{ already: boolean }>(tx, 'mark_order_paid', { p_order_id: p.orderId, p_provider_order_id: payment.order_id, p_provider_payment_id: payment.id, p_raw: event });
+        if (!r.already) confirmedOrderId = p.orderId;
       } else if (event.event === 'payment.failed') {
         await rpc(tx, 'mark_payment_failed', { p_order_id: p.orderId, p_raw: event });
       }
       return true;
     });
+    // Emailed after the settlement has committed.
+    if (confirmedOrderId) void sendOrderConfirmation(confirmedOrderId);
     return c.json({ ok: true, ...(handled === true ? {} : { ignored: handled }) });
   });

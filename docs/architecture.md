@@ -67,6 +67,12 @@ and every `/admin/*` API route rejects them with 403.
 `media`. Each exports a Hono router; `server.ts` mounts them (admin routers
 under `/admin/*` with `requireAdmin`). See [api.md](api.md).
 
+`src/emails` holds transactional mail: `order-confirmation.ts` is a pure
+template (payload → HTML + text), `index.ts` loads the order as the owner
+and sends it through `lib/mail.ts` (nodemailer, SMTP_* env). `checkout`
+triggers it for COD orders, `payments` after Razorpay settlement (verify or
+webhook, whichever lands first — `mark_order_paid` reports `already`).
+
 ## Packages
 
 * **`@elare/db`** — `schema/` (Drizzle tables mirroring the SQL), `migrations/`
