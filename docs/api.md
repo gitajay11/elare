@@ -45,8 +45,8 @@ Query-string values are parsed as JSON when they start with `{`/`[`, and
 | GET | `/orders/:id` | | |
 | POST | `/orders/:id/cancel` | `{ reason? }` | only while cancellable |
 | POST | `/orders/:id/refund-request` | `{ reason }` | delivered orders |
-| POST | `/payments/razorpay/order` | `{ order_id }` | Razorpay order for the checkout widget |
-| POST | `/payments/razorpay/verify` | `{ order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature }` | settles the order |
+| POST | `/payments/razorpay/order` | `{ order_id }` | creates (or reuses) the Razorpay order; 400 under ₹1, 409 if already paid, 503 if keys unset |
+| POST | `/payments/razorpay/verify` | `{ order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature }` | HMAC-SHA256(`order_id|payment_id`, key secret) must match (400 otherwise); settles the order |
 | POST | `/payments/razorpay/webhook` | Razorpay event (HMAC header) | no JWT; backstop |
 | GET | `/coupons/mine` | | coupons the customer may use |
 | GET | `/loyalty` | | balance + transactions |

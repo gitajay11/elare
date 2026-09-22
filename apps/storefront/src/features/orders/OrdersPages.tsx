@@ -7,6 +7,7 @@ import { Seo, Button, EmptyState, Skeleton, StatusPill, Swatch, Modal, Textarea,
 import { money, formatDate, formatDateTime, ORDER_STATUS_LABEL, PAYMENT_LABEL, METHOD_LABEL, imageUrl, cn } from '@elare/utils';
 import { toast } from '@/lib/ui-store';
 import NotFound from '@/app/NotFoundPage';
+import { payWithRazorpay } from '@/features/checkout/razorpay';
 
 export function OrdersList() {
   const [page, setPage] = useState(1);
@@ -42,6 +43,8 @@ export function OrderDetail() {
   const [refundOpen, setRefundOpen] = useState(false);
   const [reason, setReason] = useState('');
   const cancel = useMutation({ mutationFn: () => api.cancelOrder(id, reason), onSuccess: (o) => { qc.setQueryData(['order', id], o); qc.invalidateQueries({ queryKey: ['my-orders'] }); setCancelOpen(false); toast({ title: 'Order cancelled', description: 'Any points you used have been returned.' }); }, onError: (e) => toast({ title: 'Could not cancel', description: (e as Error).message, variant: 'error' }) });
+  // Online orders stay reserved until paid; the customer can finish paying from here.
+  const pay = useMutation({ mutationFn: () => payWithRazorpay(id, order?.order_number ?? ''), onSuccess: () => { qc.invalidateQueries({ queryKey: ['order', id] }); qc.invalidateQueries({ queryKey: ['my-orders'] }); toast({ title: 'Payment received', description: 'Your order is confirmed.' }); }, onError: (e) => toast({ title: 'Payment not completed', description: (e as Error).message, variant: 'error' }) });
   const refund = useMutation({ mutationFn: () => api.requestRefund(id, reason), onSuccess: (o) => { qc.setQueryData(['order', id], o); setRefundOpen(false); toast({ title: 'Refund requested', description: 'We’ll review it within 2 business days.' }); }, onError: (e) => toast({ title: 'Could not request refund', description: (e as Error).message, variant: 'error' }) });
 
   if (isLoading) return <Skeleton className="h-64" />;
@@ -58,7 +61,7 @@ export function OrderDetail() {
           <p className="text-[13px] text-mist">Placed {formatDateTime(order.placed_at)} · {METHOD_LABEL[order.payment_method]} · {PAYMENT_LABEL[order.payment_status]}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {order.status === 'pending' && order.payment_method === 'razorpay' && <Button size="sm" to="/checkout">Complete payment</Button>}
+          {order.status === 'pending' && order.payment_method === 'razorpay' && order.payment_status !== 'paid' && <Button size="sm" loading={pay.isPending} onClick={() => pay.mutate()}>Complete payment</Button>}
           {canCancel && <Button size="sm" variant="outline" onClick={() => setCancelOpen(true)}>Cancel order</Button>}
           {canRefund && <Button size="sm" variant="outline" onClick={() => setRefundOpen(true)}>Request a refund</Button>}
         </div>

@@ -7,7 +7,7 @@ storefront** (main domain), an **admin back-office** (subdomain) and one
 - **Sites** — React 19 · TypeScript · Vite 7 · Tailwind CSS 4 · Framer Motion · TanStack Query · Zustand
 - **API** — Hono on Neon Functions (Node 24); verifies Neon Auth JWTs and runs every request as the caller inside Postgres (RLS applies)
 - **Data** — Neon Postgres with all business rules in SQL functions + RLS · Managed Better Auth · Object Storage (`media` bucket) · Drizzle for typed table access
-- **Payments** — Razorpay through the API (secrets never reach the browser); Cash on delivery works with no gateway configured
+- **Payments** — Razorpay Standard Checkout: the API creates the Razorpay order (min ₹1), the storefront opens the modal, the API verifies the HMAC-SHA256 signature before settling; unpaid online orders can be paid later from the order page. Cash on delivery works with no gateway configured
 - **PWA** — both sites are installable (manifest + Workbox service worker via vite-plugin-pwa): app shell precached, images/fonts cached, API always live; the storefront prompts to refresh on a new build, the admin updates automatically. `pnpm icons` regenerates the icon sets. The admin has light / dark / auto themes (every design token is remapped under `data-theme="dark"`).
 
 ```
@@ -64,7 +64,8 @@ One `.env.local` at the repo root serves every workspace.
 | `DATABASE_URL`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL` | api, db | database and JWT verification |
 | `ALLOWED_ORIGINS` | api | comma-separated site origins; `http://localhost:*` locally |
 | `AWS_*`, `MEDIA_BUCKET` | api | uploads |
-| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | api | optional; enables "Pay online" |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | api | Razorpay server keys; the secret never leaves the API |
+| `VITE_RAZORPAY_KEY_ID` | storefront | the public key id again; shows "Pay online" at checkout (COD only when unset) |
 
 ### 3. First admin
 

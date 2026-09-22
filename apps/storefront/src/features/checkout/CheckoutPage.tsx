@@ -7,12 +7,13 @@ import { Check, ChevronLeft, CreditCard, Lock, MapPin, Truck, Wallet } from 'luc
 import { api } from '@/lib/api';
 import { type Address } from '@elare/types';
 import { Seo, useAuth, Button, Input, Checkbox, PageLoader } from '@elare/ui';
-import { money, cn, loadScript } from '@elare/utils';
+import { money, cn } from '@elare/utils';
 import { useCart, toInputs } from '@/features/cart/store';
 import { toast } from '@/lib/ui-store';
 import { useQuote } from '@/lib/hooks';
 import { Logo } from '@/components/layout/Navbar';
 import { CartLines, CouponBox, GiftProgress, PointsBox, Totals, useDisplayLines } from '@/features/cart/CartParts';
+import { RAZORPAY_ENABLED, payWithRazorpay } from './razorpay';
 
 type Step = 'address' | 'delivery' | 'payment';
 const STEPS: { key: Step; label: string; icon: React.ReactNode }[] = [
@@ -20,7 +21,6 @@ const STEPS: { key: Step; label: string; icon: React.ReactNode }[] = [
   { key: 'delivery', label: 'Delivery', icon: <Truck size={14} /> },
   { key: 'payment', label: 'Payment', icon: <CreditCard size={14} /> },
 ];
-const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID;
 /** sessionStorage key: order id whose confirmation page should empty the bag. */
 export const CLEAR_CART_FLAG = 'elare:clear-cart-for';
 const INDIAN_STATES = ['Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Delhi', 'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jammu & Kashmir', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Chandigarh', 'Puducherry', 'Ladakh'];
@@ -49,7 +49,7 @@ function CheckoutFlow({ userEmail, userName, userPhone }: { userEmail: string; u
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saveAddress, setSaveAddress] = useState(true);
   const [selectedAddress, setSelectedAddress] = useState<string | 'new'>('new');
-  const [method, setMethod] = useState<'razorpay' | 'cod'>(RAZORPAY_KEY ? 'razorpay' : 'cod');
+  const [method, setMethod] = useState<'razorpay' | 'cod'>(RAZORPAY_ENABLED ? 'razorpay' : 'cod');
   const [note, setNote] = useState('');
   const [placing, setPlacing] = useState(false);
   const [pendingOrder, setPendingOrder] = useState<{ order_id: string; order_number: string } | null>(null);
@@ -103,35 +103,6 @@ function CheckoutFlow({ userEmail, userName, userPhone }: { userEmail: string; u
     // transition commits.
     sessionStorage.setItem(CLEAR_CART_FLAG, orderId);
     navigate(`/order/${orderId}/confirmation`, { replace: true });
-  };
-
-  const payWithRazorpay = async (orderId: string, orderNumber: string) => {
-    await loadScript('https://checkout.razorpay.com/v1/checkout.js');
-    const rz = await api.razorpayOrder(orderId);
-    if (!window.Razorpay) throw new Error('Payment gateway failed to load.');
-    await new Promise<void>((resolve, reject) => {
-      const instance = new window.Razorpay!({
-        key: rz.key_id,
-        amount: rz.amount,
-        currency: rz.currency,
-        name: 'Élaré Beauty',
-        description: `Order ${orderNumber}`,
-        order_id: rz.razorpay_order_id,
-        prefill: rz.prefill,
-        theme: { color: '#B85C78' },
-        modal: { ondismiss: () => reject(new Error('Payment was not completed. You can retry below — your order is saved.')) },
-        handler: async (r: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
-          try {
-            await api.razorpayVerify({ order_id: orderId, ...r });
-            resolve();
-          } catch (e) {
-            reject(e);
-          }
-        },
-      });
-      instance.on('payment.failed', () => reject(new Error('Payment failed. Please try again or choose another method.')));
-      instance.open();
-    });
   };
 
   const placeOrder = async () => {
@@ -244,11 +215,11 @@ function CheckoutFlow({ userEmail, userName, userPhone }: { userEmail: string; u
                 <section aria-labelledby="payment-heading">
                   <h1 id="payment-heading" className="text-[2rem] sm:text-[2.4rem]">Payment</h1>
                   <div className="mt-6 space-y-3" role="radiogroup" aria-label="Payment method">
-                    {RAZORPAY_KEY && (
+                    {RAZORPAY_ENABLED && (
                       <PaymentOption selected={method === 'razorpay'} onSelect={() => setMethod('razorpay')} icon={<CreditCard size={18} />} title="Pay online" description="UPI, cards, net banking and wallets via Razorpay. Secured by 256-bit encryption." />
                     )}
                     <PaymentOption selected={method === 'cod'} onSelect={() => setMethod('cod')} icon={<Wallet size={18} />} title="Cash on delivery" description="Pay when your order arrives." />
-                    {!RAZORPAY_KEY && <p className="text-[12.5px] text-mist">Online payments will appear here once the payment gateway is configured.</p>}
+                    {!RAZORPAY_ENABLED && <p className="text-[12.5px] text-mist">Online payments will appear here once the payment gateway is configured.</p>}
                   </div>
                   <div className="mt-6">
                     <label htmlFor="note" className="block text-[12px] font-semibold uppercase tracking-[0.12em] text-ink-soft">Order note (optional)</label>

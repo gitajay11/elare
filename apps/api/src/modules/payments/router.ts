@@ -12,6 +12,11 @@ const orderRefSchema = z.object({ order_id: z.string().uuid() });
 const razorpayAuth = () => 'Basic ' + Buffer.from(`${need('RAZORPAY_KEY_ID')}:${need('RAZORPAY_KEY_SECRET')}`).toString('base64');
 const hmac = (secret: string, message: string) => createHmac('sha256', secret).update(message).digest('hex');
 const safeEqual = (a: string, b: string) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+/** Razorpay bills in the currency's minor unit (paise) and refuses anything under ₹1. */
+const toPaise = (amount: string | number) => Math.round(Number(amount) * 100);
+const MIN_PAISE = 100;
+/** Checkout prefill wants E.164; addresses store bare 10-digit Indian mobiles. */
+const e164 = (phone?: string) => (phone && /^[6-9]\d{9}$/.test(phone) ? `+91${phone}` : phone);
 
 /**
  * Razorpay. Settlement (`mark_order_paid` / `mark_payment_failed`) may only be
@@ -32,6 +37,9 @@ export const paymentsRouter = new Hono<Env>()
       return { ...o, providerOrderId: p?.providerOrderId ?? null };
     });
 
+    const amount = toPaise(order.grandTotal);
+    if (!Number.isFinite(amount) || amount < MIN_PAISE) throw new HttpError(400, 'Online payment needs an order total of at least ₹1.');
+
     let providerOrderId = order.providerOrderId;
     if (!providerOrderId) {
       if (!env('RAZORPAY_KEY_ID') || !env('RAZORPAY_KEY_SECRET')) throw new HttpError(503, 'Online payments are not configured yet — please choose Cash on delivery.', 'not_configured');
@@ -39,7 +47,7 @@ export const paymentsRouter = new Hono<Env>()
         method: 'POST',
         headers: { Authorization: razorpayAuth(), 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: Math.round(Number(order.grandTotal) * 100),
+          amount,
           currency: order.currency || 'INR',
           receipt: order.orderNumber,
           notes: { elare_order_id: order.id, order_number: order.orderNumber },
@@ -54,10 +62,10 @@ export const paymentsRouter = new Hono<Env>()
     return c.json({
       key_id: env('RAZORPAY_KEY_ID'),
       razorpay_order_id: providerOrderId,
-      amount: Math.round(Number(order.grandTotal) * 100),
+      amount,
       currency: order.currency || 'INR',
       order_number: order.orderNumber,
-      prefill: { name: addr.full_name, email: addr.email, contact: addr.phone },
+      prefill: { name: addr.full_name, email: addr.email, contact: e164(addr.phone) },
     });
   })
 
