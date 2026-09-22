@@ -7,12 +7,13 @@ import { fileURLToPath, URL } from 'node:url';
 // Customer storefront — deployed on the main domain. Installable as a PWA:
 // the app shell is precached, images and fonts are cached at runtime, and the
 // API is always fetched live (prices, stock and orders must never be stale).
+// New builds take over on the next load (autoUpdate) — no "refresh" prompt.
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         id: '/',

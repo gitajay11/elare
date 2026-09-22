@@ -8,7 +8,7 @@ storefront** (main domain), an **admin back-office** (subdomain) and one
 - **API** — Hono on Neon Functions (Node 24); verifies Neon Auth JWTs and runs every request as the caller inside Postgres (RLS applies)
 - **Data** — Neon Postgres with all business rules in SQL functions + RLS · Managed Better Auth · Object Storage (`media` bucket) · Drizzle for typed table access
 - **Payments** — Razorpay Standard Checkout: the API creates the Razorpay order (min ₹1), the storefront opens the modal, the API verifies the HMAC-SHA256 signature before settling; unpaid online orders can be paid later from the order page. Cash on delivery works with no gateway configured
-- **PWA** — both sites are installable (manifest + Workbox service worker via vite-plugin-pwa): app shell precached, images/fonts cached, API always live; the storefront prompts to refresh on a new build, the admin updates automatically. `pnpm icons` regenerates the icon sets. The admin has light / dark / auto themes (every design token is remapped under `data-theme="dark"`).
+- **PWA** — both sites are installable (manifest + Workbox service worker via vite-plugin-pwa): app shell precached, images/fonts cached, API always live; new builds activate automatically on the next load. `pnpm icons` regenerates the icon sets. The admin has light / dark / auto themes (every design token is remapped under `data-theme="dark"`).
 
 ```
 elare-beauty/

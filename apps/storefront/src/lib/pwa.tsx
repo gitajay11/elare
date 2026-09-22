@@ -1,13 +1,16 @@
 import { useRegisterSW } from 'virtual:pwa-register/react';
-import { UpdatePrompt } from '@elare/ui';
 
-/** Registers the service worker and offers a refresh when a new build is waiting. */
+/**
+ * Registers the service worker. New builds install and activate on their own
+ * (registerType: autoUpdate) and the page reloads onto the new version, so a
+ * refresh always shows the latest deploy.
+ */
 export function ServiceWorker() {
-  const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW({
+  useRegisterSW({
     onRegisteredSW(_url, registration) {
-      // Look for a new build every hour while the app stays open.
-      if (registration) setInterval(() => registration.update(), 60 * 60 * 1000);
+      // Also look for a new build every 30 minutes while the app stays open.
+      if (registration) setInterval(() => registration.update(), 30 * 60 * 1000);
     },
   });
-  return <UpdatePrompt needRefresh={needRefresh} onUpdate={() => updateServiceWorker(true)} />;
+  return null;
 }

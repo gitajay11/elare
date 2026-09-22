@@ -8,7 +8,6 @@ export interface Toast {
   image?: string | null;
   action?: { label: string; onClick: () => void };
   /** Stays until dismissed (update prompts). */
-  sticky?: boolean;
 }
 
 interface ToastState {
@@ -25,7 +24,7 @@ export const useToasts = create<ToastState>((set) => ({
   toast: (t) => {
     const id = ++toastId;
     set((s) => ({ toasts: [...s.toasts.slice(-2), { ...t, id }] }));
-    if (!t.sticky) setTimeout(() => set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) })), t.variant === 'error' ? 6000 : 3800);
+    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) })), t.variant === 'error' ? 6000 : 3800);
   },
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((x) => x.id !== id) })),
 }));
