@@ -102,6 +102,10 @@ Turborepo.
 
 ## Deployment
 
+API without the CLI: `pnpm --filter @elare/api deploy -- --env ../../.env.live.local`
+bundles `apps/api` and uploads it with the whole function environment through
+the Neon REST API (`NEON_API_KEY` in that env file; `apps/api/scripts/deploy.mjs`).
+
 * **Database / Auth / Storage / API**: `neon deploy --env .env.local` (from
   `neon.ts`). The API Function bundles `apps/api/src/server.ts`.
 * **Storefront** / **Admin**: two Vercel projects from this repo with
