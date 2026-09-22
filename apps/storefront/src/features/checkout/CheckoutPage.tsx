@@ -25,7 +25,8 @@ const STEPS: { key: Step; label: string; icon: React.ReactNode }[] = [
 export const CLEAR_CART_FLAG = 'elare:clear-cart-for';
 const INDIAN_STATES = ['Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Delhi', 'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jammu & Kashmir', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Chandigarh', 'Puducherry', 'Ladakh'];
 
-const emptyAddress = { full_name: '', phone: '', email: '', line1: '', line2: '', city: '', state: '', postal_code: '' };
+const emptyAddress = { full_name: '', phone: '', line1: '', line2: '', city: '', state: '', postal_code: '' };
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export default function Checkout() {
   const { user, profile, loading } = useAuth();
@@ -45,7 +46,11 @@ function CheckoutFlow({ userEmail, userName, userPhone }: { userEmail: string; u
   const { quote, loading: quoting } = useQuote();
   const lines = useDisplayLines(quote, items);
   const [step, setStep] = useState<Step>('address');
-  const [form, setForm] = useState({ ...emptyAddress, full_name: userName, email: userEmail, phone: userPhone });
+  const [form, setForm] = useState({ ...emptyAddress, full_name: userName, phone: userPhone });
+  // Where the confirmation and status emails go. Defaults to the account
+  // email but is independent of which address is chosen, so an edit sticks
+  // even when the new address gets saved and auto-selected.
+  const [email, setEmail] = useState(userEmail);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saveAddress, setSaveAddress] = useState(true);
   const [selectedAddress, setSelectedAddress] = useState<string | 'new'>('new');
@@ -66,17 +71,20 @@ function CheckoutFlow({ userEmail, userName, userPhone }: { userEmail: string; u
   const address = useMemo<Record<string, string>>(() => {
     if (selectedAddress !== 'new' && addresses) {
       const a = addresses.find((x) => x.id === selectedAddress);
-      if (a) return { full_name: a.full_name, phone: a.phone, email: userEmail, line1: a.line1, line2: a.line2 ?? '', city: a.city, state: a.state, postal_code: a.postal_code, country: a.country };
+      if (a) return { full_name: a.full_name, phone: a.phone, email, line1: a.line1, line2: a.line2 ?? '', city: a.city, state: a.state, postal_code: a.postal_code, country: a.country };
     }
-    return { ...form, country: 'IN' };
-  }, [selectedAddress, addresses, form, userEmail]);
+    return { ...form, email, country: 'IN' };
+  }, [selectedAddress, addresses, form, email]);
 
   const validate = () => {
-    if (selectedAddress !== 'new') return true;
     const e: Record<string, string> = {};
+    if (!EMAIL_RE.test(email.trim())) e.email = 'Enter a valid email';
+    if (selectedAddress !== 'new') {
+      setErrors(e);
+      return Object.keys(e).length === 0;
+    }
     if (form.full_name.trim().length < 2) e.full_name = 'Enter your full name';
     if (!/^[6-9]\d{9}$/.test(form.phone.replace(/\D/g, ''))) e.phone = 'Enter a valid 10-digit mobile number';
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email)) e.email = 'Enter a valid email';
     if (form.line1.trim().length < 5) e.line1 = 'Enter your street address';
     if (form.city.trim().length < 2) e.city = 'Enter your city';
     if (!form.state) e.state = 'Select your state';
@@ -158,6 +166,9 @@ function CheckoutFlow({ userEmail, userName, userPhone }: { userEmail: string; u
               {step === 'address' && (
                 <section aria-labelledby="address-heading">
                   <h1 id="address-heading" className="text-[2rem] sm:text-[2.4rem]">Where should we send it?</h1>
+                  <div className="mt-6 max-w-md">
+                    <Input label="Email for order updates" type="email" autoComplete="email" value={email} onChange={(e) => { setEmail(e.target.value); if (errors.email) setErrors({ ...errors, email: '' }); }} error={errors.email} hint="Your confirmation and delivery updates go here." />
+                  </div>
                   {addresses && addresses.length > 0 && (
                     <div className="mt-6 grid gap-3 sm:grid-cols-2">
                       {addresses.map((a) => <AddressOption key={a.id} a={a} selected={selectedAddress === a.id} onSelect={() => setSelectedAddress(a.id)} />)}
@@ -168,7 +179,6 @@ function CheckoutFlow({ userEmail, userName, userPhone }: { userEmail: string; u
                     <form className="mt-6 grid gap-4 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); continueFromAddress(); }} noValidate>
                       <Input label="Full name" autoComplete="name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} error={errors.full_name} />
                       <Input label="Mobile number" autoComplete="tel" inputMode="numeric" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} error={errors.phone} />
-                      <Input label="Email" type="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} error={errors.email} wrapClassName="sm:col-span-2" />
                       <Input label="Address" autoComplete="address-line1" value={form.line1} onChange={(e) => setForm({ ...form, line1: e.target.value })} error={errors.line1} wrapClassName="sm:col-span-2" placeholder="Flat, building, street" />
                       <Input label="Landmark / area (optional)" autoComplete="address-line2" value={form.line2} onChange={(e) => setForm({ ...form, line2: e.target.value })} wrapClassName="sm:col-span-2" />
                       <Input label="City" autoComplete="address-level2" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} error={errors.city} />
@@ -205,6 +215,7 @@ function CheckoutFlow({ userEmail, userName, userPhone }: { userEmail: string; u
                     <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-mist">Delivering to</p>
                     <p className="mt-2 font-semibold">{address.full_name} · {address.phone}</p>
                     <p className="text-ink-soft">{address.line1}{address.line2 ? `, ${address.line2}` : ''}, {address.city}, {address.state} {address.postal_code}</p>
+                    <p className="mt-1 text-ink-soft">Updates to <span className="font-semibold text-ink">{address.email}</span></p>
                     <button type="button" onClick={() => setStep('address')} className="mt-2 text-[12.5px] font-semibold text-rose">Change</button>
                   </div>
                   <div className="mt-6"><Button size="lg" onClick={() => setStep('payment')}>Continue to payment</Button></div>
