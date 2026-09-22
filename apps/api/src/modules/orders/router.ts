@@ -25,14 +25,14 @@ export const ordersRouter = new Hono<Env>()
     const { reason } = await body(c, reasonSchema);
     const id = parse(uuid, c.req.param('id'));
     const order = await call<{ status: string }>(userOf(c), 'cancel_my_order', { p_order_id: id, p_reason: reason ?? null });
-    void sendOrderStatusUpdate(id, order.status);
+    await sendOrderStatusUpdate(id, order.status);
     return c.json(order);
   })
   .post('/:id/refund-request', async (c) => {
     const { reason } = await body(c, refundSchema);
     const id = parse(uuid, c.req.param('id'));
     const order = await call<{ status: string }>(userOf(c), 'request_refund', { p_order_id: id, p_reason: reason });
-    void sendOrderStatusUpdate(id, order.status);
+    await sendOrderStatusUpdate(id, order.status);
     return c.json(order);
   });
 
@@ -59,6 +59,6 @@ export const adminOrdersRouter = new Hono<Env>()
       p_tracking_url: p.tracking_url ?? null,
     });
     // _transition_order only succeeds on a real change, so a status in the body means the customer should hear about it.
-    if (p.status) void sendOrderStatusUpdate(id, order.status, p.note);
+    if (p.status) await sendOrderStatusUpdate(id, order.status, p.note);
     return c.json(order);
   });

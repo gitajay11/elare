@@ -21,7 +21,13 @@ function transport(): Transporter | null {
     port,
     secure: env('SMTP_SECURE') ? env('SMTP_SECURE') === 'true' : port === 465,
     auth: env('SMTP_USER') ? { user: env('SMTP_USER')!, pass: env('SMTP_PASS') ?? '' } : undefined,
+    // Reuse the connection while this container is warm — a burst of status
+    // changes then costs one handshake, not one per email.
+    pool: true,
+    maxConnections: 1,
+    maxMessages: 50,
     connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
     socketTimeout: 20_000,
   });
   return transporter;

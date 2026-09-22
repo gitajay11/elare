@@ -61,13 +61,30 @@ async function loadOrderEmail(orderId: string): Promise<{ to: string; data: Orde
  * payments. Never throws — a mail failure must not fail the checkout.
  */
 /**
+ * Waits for a mail send, but never longer than `ms` — a hung SMTP server
+ * must not hold up an admin's status change or a customer's checkout.
+ */
+async function settle(label: string, p: Promise<void>, ms = 15_000): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  await Promise.race([
+    p,
+    new Promise<void>((resolve) => { timer = setTimeout(() => { console.error(`[mail] ${label} timed out after ${ms}ms`); resolve(); }, ms); }),
+  ]);
+  if (timer) clearTimeout(timer);
+}
+
+/**
  * Emails the customer about a status change (packed, shipped, delivered,
  * cancelled, refunds…). `confirmed` sends the confirmation email instead;
  * statuses without copy (pending) send nothing. Never throws.
  */
-export async function sendOrderStatusUpdate(orderId: string, status: string, note?: string | null): Promise<void> {
-  if (status === 'confirmed') return sendOrderConfirmation(orderId);
-  if (!hasStatusEmail(status)) return;
+export function sendOrderStatusUpdate(orderId: string, status: string, note?: string | null): Promise<void> {
+  return settle(`${status} email for ${orderId}`, statusUpdate(orderId, status, note));
+}
+
+async function statusUpdate(orderId: string, status: string, note?: string | null): Promise<void> {
+  if (status === 'confirmed') return confirmation(orderId);
+  if (!hasStatusEmail(status)) { console.log(`[mail] no email defined for status ${status} (order ${orderId})`); return; }
   if (!mailEnabled()) {
     console.warn(`[mail] SMTP not configured — no ${status} email for order ${orderId}`);
     return;
@@ -81,7 +98,11 @@ export async function sendOrderStatusUpdate(orderId: string, status: string, not
   }
 }
 
-export async function sendOrderConfirmation(orderId: string): Promise<void> {
+export function sendOrderConfirmation(orderId: string): Promise<void> {
+  return settle(`confirmation for ${orderId}`, confirmation(orderId));
+}
+
+async function confirmation(orderId: string): Promise<void> {
   if (!mailEnabled()) {
     console.warn(`[mail] SMTP not configured — no confirmation for order ${orderId}`);
     return;

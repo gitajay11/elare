@@ -24,6 +24,7 @@ export const checkoutRouter = new Hono<Env>()
       p_redeem_points: p.redeem_points ?? 0,
       p_note: p.note ?? null,
     });
-    if (p.payment_method === 'cod') void sendOrderConfirmation(order.order_id);
+    // Awaited: a pending promise would be lost if the function suspends after responding.
+    if (p.payment_method === 'cod') await sendOrderConfirmation(order.order_id);
     return c.json(order, 201);
   });

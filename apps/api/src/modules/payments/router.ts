@@ -36,7 +36,7 @@ async function reconcile(orderId: string, providerOrderId: string): Promise<{ pa
   const r = await asOwner((tx) => rpc<{ already: boolean }>(tx, 'mark_order_paid', {
     p_order_id: orderId, p_provider_order_id: providerOrderId, p_provider_payment_id: captured.id, p_raw: { source: 'reconcile', payment: captured },
   }));
-  if (!r.already) void sendOrderConfirmation(orderId);
+  if (!r.already) await sendOrderConfirmation(orderId);
   return { paid: true, already: r.already };
 }
 
@@ -135,7 +135,7 @@ export const paymentsRouter = new Hono<Env>()
         const r = await asOwner((tx) => rpc<{ already: boolean }>(tx, 'mark_order_paid', {
           p_order_id: orderId, p_provider_order_id: razorpayOrderId, p_provider_payment_id: paymentId, p_raw: { source: 'checkout-callback', razorpay_payment_id: paymentId },
         }));
-        if (!r.already) void sendOrderConfirmation(orderId);
+        if (!r.already) await sendOrderConfirmation(orderId);
         return c.redirect(`${storeUrl()}/order/${orderId}/confirmation`, 303);
       }
     }
@@ -165,7 +165,7 @@ export const paymentsRouter = new Hono<Env>()
         p_raw: { source: 'checkout-verify', razorpay_payment_id },
       });
     });
-    if (!result.already) void sendOrderConfirmation(order_id);
+    if (!result.already) await sendOrderConfirmation(order_id);
     return c.json({ ok: true, ...result });
   })
 
@@ -191,6 +191,6 @@ export const paymentsRouter = new Hono<Env>()
       return true;
     });
     // Emailed after the settlement has committed.
-    if (confirmedOrderId) void sendOrderConfirmation(confirmedOrderId);
+    if (confirmedOrderId) await sendOrderConfirmation(confirmedOrderId);
     return c.json({ ok: true, ...(handled === true ? {} : { ignored: handled }) });
   });
