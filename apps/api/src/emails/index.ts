@@ -4,6 +4,7 @@ import { asOwner } from '../lib/db';
 import { env } from '../lib/env';
 import { mailEnabled, sendMail } from '../lib/mail';
 import { renderHtml, renderText, subjectFor, type OrderEmail } from './order-confirmation';
+import { hasStatusEmail, renderStatusHtml, renderStatusText, statusSubject } from './order-status';
 
 const storeUrl = () => (env('STORE_URL') || 'https://www.elarebeauty.store').replace(/\/$/, '');
 const supportEmail = () => env('SUPPORT_EMAIL') || env('SMTP_USER') || 'hello@elarebeauty.store';
@@ -25,8 +26,12 @@ async function loadOrderEmail(orderId: string): Promise<{ to: string; data: Orde
       supportEmail: supportEmail(),
       placedAt: row.o.placedAt,
       customerName: addr.full_name || row.name || '',
+      status: row.o.status,
       paymentMethod: row.o.paymentMethod as OrderEmail['paymentMethod'],
       paymentStatus: row.o.paymentStatus,
+      carrier: row.o.carrier,
+      trackingNumber: row.o.trackingNumber,
+      trackingUrl: row.o.trackingUrl,
       items: items
         .sort((a, b) => Number(a.i.isGift) - Number(b.i.isGift))
         .map(({ i, slug }) => ({
@@ -55,6 +60,27 @@ async function loadOrderEmail(orderId: string): Promise<{ to: string; data: Orde
  * actually confirmed: immediately for COD, after settlement for online
  * payments. Never throws — a mail failure must not fail the checkout.
  */
+/**
+ * Emails the customer about a status change (packed, shipped, delivered,
+ * cancelled, refunds…). `confirmed` sends the confirmation email instead;
+ * statuses without copy (pending) send nothing. Never throws.
+ */
+export async function sendOrderStatusUpdate(orderId: string, status: string, note?: string | null): Promise<void> {
+  if (status === 'confirmed') return sendOrderConfirmation(orderId);
+  if (!hasStatusEmail(status)) return;
+  if (!mailEnabled()) {
+    console.warn(`[mail] SMTP not configured — no ${status} email for order ${orderId}`);
+    return;
+  }
+  try {
+    const loaded = await loadOrderEmail(orderId);
+    if (!loaded) return;
+    await sendMail({ to: loaded.to, subject: statusSubject(loaded.data, status), html: renderStatusHtml(loaded.data, status, note), text: renderStatusText(loaded.data, status, note) });
+  } catch (e) {
+    console.error(`[mail] ${status} email for ${orderId} failed:`, (e as Error).message);
+  }
+}
+
 export async function sendOrderConfirmation(orderId: string): Promise<void> {
   if (!mailEnabled()) {
     console.warn(`[mail] SMTP not configured — no confirmation for order ${orderId}`);

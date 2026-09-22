@@ -4,7 +4,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Menu, Search, ShoppingBag, User } from 'lucide-react';
 import { cn } from '@elare/utils';
-import { useAuth, IconButton, InstallButton } from '@elare/ui';
+import { useAuth, IconButton, InstallButton, Logo } from '@elare/ui';
 import { selectCount, useCart } from '@/features/cart/store';
 import { useUi } from '@/lib/ui-store';
 import { useWishlist } from '@/features/wishlist/store';
@@ -20,14 +20,7 @@ export const NAV_LINKS = [
   { to: '/best-sellers', label: 'Best Sellers' },
 ];
 
-export function Logo({ className, light }: { className?: string; light?: boolean }) {
-  return (
-    <Link to="/" className={cn('inline-flex items-baseline gap-1 font-display', className)} aria-label="Élaré Beauty — home">
-      <span className={cn('text-[1.55rem] font-semibold leading-none tracking-[0.08em]', light ? 'text-white' : 'text-ink')}>ÉLARÉ</span>
-      <span className={cn('text-[0.62rem] font-sans font-semibold uppercase tracking-[0.34em]', light ? 'text-white/80' : 'text-rose')}>Beauty</span>
-    </Link>
-  );
-}
+export { Logo };
 
 function Count({ n }: { n: number }) {
   return (

@@ -28,8 +28,12 @@ export interface OrderEmail {
   supportEmail: string;
   placedAt: Date;
   customerName: string;
+  status: string;
   paymentMethod: 'razorpay' | 'cod' | 'points';
   paymentStatus: string;
+  carrier: string | null;
+  trackingNumber: string | null;
+  trackingUrl: string | null;
   items: OrderEmailItem[];
   subtotal: number;
   couponCode: string | null;
@@ -52,13 +56,14 @@ const C = {
 const SANS = "'Manrope', 'Helvetica Neue', Helvetica, Arial, sans-serif";
 const SERIF = "'Cormorant Garamond', Georgia, 'Times New Roman', serif";
 
-const esc = (s: string) => s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);
-const inr = (n: number) => '₹' + new Intl.NumberFormat('en-IN', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 }).format(n);
-const when = (d: Date) => new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' }).format(d) + ' IST';
-const firstName = (name: string) => name.trim().split(/\s+/)[0] || 'there';
+export const esc = (s: string) => s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);
+export const inr = (n: number) => '₹' + new Intl.NumberFormat('en-IN', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 }).format(n);
+export const when = (d: Date) => new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' }).format(d) + ' IST';
+export const firstName = (name: string) => name.trim().split(/\s+/)[0] || 'there';
 
-const PAYMENT_LABEL: Record<OrderEmail['paymentMethod'], string> = { razorpay: 'Paid online via Razorpay', cod: 'Cash on delivery', points: 'Paid with Élaré points' };
-const STEPS = ['Confirmed', 'Packed', 'Shipped', 'Delivered'];
+export const PAYMENT_LABEL: Record<OrderEmail['paymentMethod'], string> = { razorpay: 'Paid online via Razorpay', cod: 'Cash on delivery', points: 'Paid with Élaré points' };
+export const STEPS = ['Confirmed', 'Packed', 'Shipped', 'Delivered'];
+export { C, SANS, SERIF };
 
 export function subjectFor(o: OrderEmail): string {
   return `Your Élaré order ${o.orderNumber} is confirmed ✨`;
@@ -70,38 +75,55 @@ function preheader(o: OrderEmail): string {
   return `Thank you, ${firstName(o.customerName)}. ${n} item${n === 1 ? '' : 's'} · ${inr(o.total)} · ${o.paymentMethod === 'cod' ? 'pay on delivery' : 'payment received'}.`;
 }
 
-function button(href: string, label: string, primary = true): string {
+/** Emblem + wordmark, linking home. The PNG is served by the storefront (pnpm icons). */
+export function wordmark(storeUrl: string): string {
+  return `<a href="${esc(storeUrl)}" style="text-decoration:none;display:inline-block;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td valign="middle" style="padding-right:12px;"><img src="${esc(storeUrl)}/logo-email.png" width="56" height="56" alt="Élaré" style="display:block;width:56px;height:56px;border:0;" /></td>
+        <td valign="middle" style="text-align:left;">
+          <span style="font-family:${SERIF};font-size:28px;font-weight:600;letter-spacing:0.2em;color:${C.ink};line-height:1;display:block;">ÉLARÉ</span>
+          <span style="font-family:${SANS};font-size:9.5px;letter-spacing:0.36em;color:${C.rose};text-transform:uppercase;display:block;margin-top:4px;">Beauty</span>
+        </td>
+      </tr></table>
+    </a>`;
+}
+
+export function button(href: string, label: string, primary = true): string {
   const bg = primary ? C.ink : C.white;
   const fg = primary ? C.white : C.ink;
   const border = primary ? C.ink : C.line;
   return `<a href="${esc(href)}" class="btn ${primary ? 'btn-primary' : 'btn-ghost'}" style="display:inline-block;background:${bg};color:${fg};border:1px solid ${border};border-radius:999px;padding:14px 26px;font-family:${SANS};font-size:12.5px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;text-decoration:none;mso-padding-alt:0;"><!--[if mso]><i style="letter-spacing:26px;mso-font-width:-100%;mso-text-raise:20pt">&nbsp;</i><![endif]--><span style="mso-text-raise:10pt;">${esc(label)}</span><!--[if mso]><i style="letter-spacing:26px;mso-font-width:-100%">&nbsp;</i><![endif]--></a>`;
 }
 
-function timeline(): string {
+export function timeline(activeStep = 0): string {
   // Each step is [left connector | dot | right connector] so the line runs
   // through the centre of every dot regardless of the client's line-height.
+  // Steps before `activeStep` render as done (filled), the active one glows.
   const cells = STEPS.map((label, i) => {
-    const active = i === 0;
+    const active = i === activeStep;
+    const done = i < activeStep;
     const first = i === 0;
     const last = i === STEPS.length - 1;
     const dot = active
-      ? `<span style="display:block;width:16px;height:16px;border-radius:50%;background:${C.rose};box-shadow:0 0 0 4px ${C.blush};"></span>`
-      : `<span style="display:block;width:12px;height:12px;border-radius:50%;background:${C.white};border:2px solid ${C.blushDeep};"></span>`;
-    const seg = (visible: boolean, fade = false) =>
-      `<td valign="middle" style="padding:0;"><div style="height:2px;line-height:2px;font-size:2px;background:${visible ? (fade ? `linear-gradient(90deg,${C.rose},${C.blushDeep})` : C.blushDeep) : 'transparent'};">&nbsp;</div></td>`;
+      ? `<span style="display:block;margin:0 auto;width:16px;height:16px;border-radius:50%;background:${C.rose};box-shadow:0 0 0 4px ${C.blush};"></span>`
+      : done
+        ? `<span style="display:block;margin:0 auto;width:12px;height:12px;border-radius:50%;background:${C.rose};"></span>`
+        : `<span style="display:block;margin:0 auto;width:12px;height:12px;border-radius:50%;background:${C.white};border:2px solid ${C.blushDeep};"></span>`;
+    const seg = (visible: boolean, state: 'done' | 'fade' | 'todo') =>
+      `<td valign="middle" style="padding:0;"><div style="height:2px;line-height:2px;font-size:2px;background:${!visible ? 'transparent' : state === 'done' ? C.rose : state === 'fade' ? `linear-gradient(90deg,${C.rose},${C.blushDeep})` : C.blushDeep};">&nbsp;</div></td>`;
     return `<td valign="top" style="width:25%;padding:0;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-        ${seg(!first)}
-        <td width="${active ? 24 : 16}" valign="middle" style="padding:0 4px;">${dot}</td>
-        ${seg(!last, active)}
+        ${seg(!first, done || active ? 'done' : 'todo')}
+        <td width="${active ? 24 : 16}" height="24" valign="middle" style="padding:0 4px;height:24px;">${dot}</td>
+        ${seg(!last, done ? 'done' : active ? 'fade' : 'todo')}
       </tr></table>
-      <div style="font-family:${SANS};font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:${active ? C.ink : C.mist};font-weight:${active ? 700 : 600};margin-top:12px;text-align:center;">${label}</div>
+      <div style="font-family:${SANS};font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:${active ? C.ink : done ? C.rose : C.mist};font-weight:${active ? 700 : 600};margin-top:12px;text-align:center;">${label}</div>
     </td>`;
   }).join('');
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${cells}</tr></table>`;
 }
 
-function itemRow(i: OrderEmailItem): string {
+export function itemRow(i: OrderEmailItem): string {
   const img = i.imageUrl
     ? `<img src="${esc(i.imageUrl)}" width="64" height="80" alt="" style="display:block;width:64px;height:80px;object-fit:cover;border-radius:12px;background:${C.nude};border:0;" />`
     : `<div style="width:64px;height:80px;border-radius:12px;background:${C.nude};"></div>`;
@@ -127,7 +149,7 @@ function itemRow(i: OrderEmailItem): string {
   </tr>`;
 }
 
-function totals(o: OrderEmail): string {
+export function totals(o: OrderEmail): string {
   const row = (label: string, value: string, opts: { muted?: boolean; accent?: boolean; strong?: boolean } = {}) =>
     `<tr><td style="padding:6px 0;font-family:${SANS};font-size:${opts.strong ? 16 : 13.5}px;color:${opts.accent ? C.success : opts.muted ? C.mist : C.inkSoft};font-weight:${opts.strong ? 700 : 500};">${label}</td>
      <td align="right" style="padding:6px 0;font-family:${SANS};font-size:${opts.strong ? 20 : 13.5}px;color:${opts.accent ? C.success : C.ink};font-weight:${opts.strong ? 700 : 600};white-space:nowrap;">${value}</td></tr>`;
@@ -144,11 +166,10 @@ function totals(o: OrderEmail): string {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${rows}</table>`;
 }
 
-export function renderHtml(o: OrderEmail): string {
-  const a = o.address;
-  const addressLines = [a.full_name, a.line1, a.line2, [a.city, a.state].filter(Boolean).join(', ') + (a.postal_code ? ` ${a.postal_code}` : ''), a.phone]
-    .filter((s) => s && s.trim()).map((s) => esc(s!)).join('<br>');
-  const heading = o.paymentMethod === 'cod' ? 'Your order is confirmed.' : 'Payment received — your order is confirmed.';
+export interface ShellProps { title: string; preheader: string; storeUrl: string; orderUrl: string; supportEmail: string; orderNumber: string; helpLine?: string }
+
+/** Document chrome shared by every order email: head, wordmark, footer. `content` is the card rows. */
+export function shell(p: ShellProps, content: string): string {
   return `<!DOCTYPE html>
 <html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
@@ -157,7 +178,7 @@ export function renderHtml(o: OrderEmail): string {
 <meta name="x-apple-disable-message-reformatting">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
-<title>${esc(subjectFor(o))}</title>
+<title>${esc(p.title)}</title>
 <!--[if mso]><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -182,7 +203,7 @@ export function renderHtml(o: OrderEmail): string {
 </style>
 </head>
 <body style="margin:0;padding:0;background:${C.ivory};">
-<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:${C.ivory};">${esc(preheader(o))}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:${C.ivory};">${esc(p.preheader)}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.ivory};">
 <tr><td align="center" style="padding:32px 16px 48px;">
 <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
@@ -190,13 +211,40 @@ export function renderHtml(o: OrderEmail): string {
 
   <!-- Wordmark -->
   <tr><td align="center" style="padding:8px 0 28px;">
-    <a href="${esc(o.storeUrl)}" style="text-decoration:none;">
-      <span style="font-family:${SERIF};font-size:30px;font-weight:600;letter-spacing:0.22em;color:${C.ink};">ÉLARÉ</span>
-      <span style="font-family:${SANS};font-size:9.5px;letter-spacing:0.36em;color:${C.rose};text-transform:uppercase;display:block;margin-top:2px;">Beauty</span>
-    </a>
+    ${wordmark(p.storeUrl)}
   </td></tr>
 
-  <!-- Hero card -->
+${content}
+
+  <!-- Help -->
+  <tr><td align="center" style="padding:34px 24px 0;font-family:${SANS};font-size:13px;line-height:1.7;color:${C.inkSoft};">
+    ${p.helpLine ?? ''}
+    Questions — reply to this email or write to <a class="link" href="mailto:${esc(p.supportEmail)}" style="color:${C.rose};font-weight:600;text-decoration:none;">${esc(p.supportEmail)}</a>.
+  </td></tr>
+  <tr><td align="center" style="padding:28px 24px 0;">
+    <img src="${esc(p.storeUrl)}/logo-email.png" width="40" height="40" alt="Élaré" style="display:inline-block;width:40px;height:40px;border:0;" />
+    <div style="font-family:${SERIF};font-size:18px;letter-spacing:0.22em;color:${C.ink};margin-top:6px;">ÉLARÉ</div>
+    <div style="font-family:${SANS};font-size:11px;line-height:1.8;color:${C.mist};margin-top:4px;">Beauty, defined by you.<br><a class="link" href="${esc(p.storeUrl)}" style="color:${C.mist};text-decoration:none;">${esc(p.storeUrl.replace(/^https?:\/\//, ''))}</a> · <a class="link" href="${esc(p.storeUrl)}/pages/returns" style="color:${C.mist};text-decoration:none;">Returns</a> · <a class="link" href="${esc(p.storeUrl)}/pages/terms" style="color:${C.mist};text-decoration:none;">Terms</a></div>
+    <div style="font-family:${SANS};font-size:10.5px;color:${C.mist};margin-top:10px;">You're receiving this because you placed order ${esc(p.orderNumber)} at Élaré Beauty.</div>
+  </td></tr>
+
+</table>
+<!--[if mso]></td></tr></table><![endif]-->
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
+export function renderHtml(o: OrderEmail): string {
+  const a = o.address;
+  const addressLines = [a.full_name, a.line1, a.line2, [a.city, a.state].filter(Boolean).join(', ') + (a.postal_code ? ` ${a.postal_code}` : ''), a.phone]
+    .filter((s) => s && s.trim()).map((s) => esc(s!)).join('<br>');
+  const heading = o.paymentMethod === 'cod' ? 'Your order is confirmed.' : 'Payment received — your order is confirmed.';
+  return shell(
+    { title: subjectFor(o), preheader: preheader(o), storeUrl: o.storeUrl, orderUrl: o.orderUrl, supportEmail: o.supportEmail, orderNumber: o.orderNumber,
+      helpLine: `Changed your mind? You can cancel from <a class="link" href="${esc(o.orderUrl)}" style="color:${C.rose};font-weight:600;text-decoration:none;">your order page</a> until it's packed.<br>` },
+    `  <!-- Hero card -->
   <tr><td style="padding:0;">
     <div style="background:${C.white};border:1px solid ${C.line};border-radius:28px;overflow:hidden;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -244,25 +292,10 @@ export function renderHtml(o: OrderEmail): string {
       </td>
     </tr></table>
   </td></tr>
-
-  <!-- Help -->
-  <tr><td align="center" style="padding:34px 24px 0;font-family:${SANS};font-size:13px;line-height:1.7;color:${C.inkSoft};">
-    Changed your mind? You can cancel from <a class="link" href="${esc(o.orderUrl)}" style="color:${C.rose};font-weight:600;text-decoration:none;">your order page</a> until it's packed.<br>
-    Questions — reply to this email or write to <a class="link" href="mailto:${esc(o.supportEmail)}" style="color:${C.rose};font-weight:600;text-decoration:none;">${esc(o.supportEmail)}</a>.
-  </td></tr>
-  <tr><td align="center" style="padding:28px 24px 0;">
-    <span style="font-family:${SERIF};font-size:18px;letter-spacing:0.22em;color:${C.ink};">ÉLARÉ</span>
-    <div style="font-family:${SANS};font-size:11px;line-height:1.8;color:${C.mist};margin-top:8px;">Beauty, defined by you.<br><a class="link" href="${esc(o.storeUrl)}" style="color:${C.mist};text-decoration:none;">${esc(o.storeUrl.replace(/^https?:\/\//, ''))}</a> · <a class="link" href="${esc(o.storeUrl)}/pages/returns" style="color:${C.mist};text-decoration:none;">Returns</a> · <a class="link" href="${esc(o.storeUrl)}/pages/terms" style="color:${C.mist};text-decoration:none;">Terms</a></div>
-    <div style="font-family:${SANS};font-size:10.5px;color:${C.mist};margin-top:10px;">You're receiving this because you placed order ${esc(o.orderNumber)} at Élaré Beauty.</div>
-  </td></tr>
-
-</table>
-<!--[if mso]></td></tr></table><![endif]-->
-</td></tr>
-</table>
-</body>
-</html>`;
+`,
+  );
 }
+
 
 export function renderText(o: OrderEmail): string {
   const a = o.address;

@@ -96,7 +96,7 @@ export function AdminOrderDetail() {
             <h3 className="mb-3 text-xl">Update status</h3>
             {next.length ? (
               <>
-                <Input label="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Visible to the customer" />
+                <Input label="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Visible to the customer" hint="Each status change emails the customer; the note is included." />
                 <div className="mt-3 flex flex-wrap gap-2">
                   {next.map((s) => <Button key={s} size="sm" variant={s === 'cancelled' || s === 'refunded' ? 'danger' : 'primary'} loading={update.isPending} onClick={() => update.mutate({ status: s })}>{s === 'delivered' && order.status === 'refund_requested' ? 'Reject refund' : ORDER_STATUS_LABEL[s]}</Button>)}
                 </div>
@@ -105,7 +105,8 @@ export function AdminOrderDetail() {
             ) : <p className="text-sm text-mist">This order is closed.</p>}
           </section>
           <section className="rounded-2xl border border-line bg-white p-5">
-            <h3 className="mb-3 text-xl">Tracking</h3>
+            <h3 className="mb-1 text-xl">Tracking</h3>
+            <p className="mb-3 text-[12px] text-mist">Save tracking <b>before</b> marking the order shipped — it goes into the customer's email.</p>
             <div className="space-y-3">
               <Input label="Carrier" value={tracking.carrier || order.carrier || ''} onChange={(e) => setTracking({ ...tracking, carrier: e.target.value })} />
               <Input label="Tracking number" value={tracking.trackingNumber || order.tracking_number || ''} onChange={(e) => setTracking({ ...tracking, trackingNumber: e.target.value })} />

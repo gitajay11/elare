@@ -65,7 +65,7 @@ export default function Auth() {
         </div>
       </Modal>
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="mx-auto w-full max-w-md rounded-[28px] border border-line bg-white p-7 shadow-soft sm:p-9">
-        <div className="mb-6 flex justify-center"><Logo /></div>
+        <div className="mb-6 flex justify-center"><Logo size="lg" /></div>
         {!configured && <p className="mb-4 rounded-xl bg-danger/10 px-4 py-3 text-[13px] text-danger">Not configured yet — set <code>VITE_NEON_URL</code> and <code>VITE_API_URL</code> in <code>.env.local</code>.</p>}
         <h1 className="text-center text-3xl">{mode === 'reset' ? 'Reset your password' : 'Team sign in'}</h1>
         {mode === 'signin' && <p className="mb-6 mt-1 text-center text-[13px] text-mist">Admin access is granted by an existing administrator.</p>}

@@ -1,51 +1,52 @@
-// Renders the PWA icon set for both sites from an inline SVG of the wordmark.
+// Renders every icon both sites need from the brand emblem in logo/elare logo.png.
 //
 //   pnpm icons
 //
-// Writes into apps/<site>/public: pwa-192.png, pwa-512.png, pwa-maskable-512.png,
-// apple-touch-icon.png (180). Maskable icons keep the mark inside the safe zone.
+// Writes into apps/<site>/public:
+//   logo.png            transparent emblem for the site header (256)
+//   logo-email.png      small transparent emblem for email headers (160)
+//   favicon.png         64 — tab icon (PNG works everywhere SVG does, and Safari too)
+//   apple-touch-icon.png 180 on the site's background
+//   pwa-192.png / pwa-512.png / pwa-maskable-512.png (maskable keeps the emblem in the safe zone)
 import sharp from 'sharp';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, unlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const SOURCE = join(root, 'logo', 'elare logo.png');
 
-const SITES = {
-  storefront: { bg: '#FFF9FA', disc: '#F8DDE5', mark: '#B85C78', label: null },
-  admin: { bg: '#241D20', disc: '#5C5257', mark: '#F8DDE5', label: 'ADMIN' },
-};
+// Backgrounds match each site's theme-color.
+const SITES = { storefront: '#FFF9FA', admin: '#241D20' };
 
-/** The mark as SVG; `pad` shrinks it towards the centre for maskable icons. */
-function svg({ bg, disc, mark, label }, size, pad = 0, rounded = true) {
-  const inner = size - pad * 2;
-  const r = inner * 0.36;
-  const cx = size / 2;
-  const cy = size / 2;
-  const fontSize = inner * 0.56;
-  const labelSvg = label
-    ? `<text x="${cx}" y="${cy + inner * 0.42}" text-anchor="middle" font-family="Manrope, Arial, sans-serif" font-size="${inner * 0.11}" font-weight="700" letter-spacing="${inner * 0.02}" fill="${mark}">${label}</text>`
-    : '';
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" rx="${rounded ? size * 0.22 : 0}" fill="${bg}"/>
-  <circle cx="${cx}" cy="${cy - (label ? inner * 0.04 : 0)}" r="${r}" fill="${disc}"/>
-  <text x="${cx}" y="${cy + fontSize * 0.34 - (label ? inner * 0.04 : 0)}" text-anchor="middle" font-family="Cormorant Garamond, Georgia, 'Times New Roman', serif" font-size="${fontSize}" font-weight="600" fill="${mark}">É</text>
-  ${labelSvg}
-</svg>`;
+// Trim the transparent margin once so every size is framed identically.
+const emblem = await sharp(SOURCE).trim().png().toBuffer();
+
+/** Emblem scaled to `scale` of a `size` square, optionally on a solid background. */
+async function icon(size, scale, bg) {
+  const inner = Math.round(size * scale);
+  const mark = await sharp(emblem).resize(inner, inner, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer();
+  const base = sharp({ create: { width: size, height: size, channels: 4, background: bg ?? { r: 0, g: 0, b: 0, alpha: 0 } } });
+  return base.composite([{ input: mark, left: Math.round((size - inner) / 2), top: Math.round((size - inner) / 2) }]).png().toBuffer();
 }
 
-for (const [site, theme] of Object.entries(SITES)) {
+for (const [site, bg] of Object.entries(SITES)) {
   const out = join(root, 'apps', site, 'public');
   mkdirSync(out, { recursive: true });
   const jobs = [
-    ['pwa-192.png', svg(theme, 192)],
-    ['pwa-512.png', svg(theme, 512)],
-    ['pwa-maskable-512.png', svg(theme, 512, 64, false)],
-    ['apple-touch-icon.png', svg(theme, 180, 0, false)],
+    ['logo.png', await icon(256, 1)],
+    ['logo-email.png', await icon(160, 1)],
+    ['favicon.png', await icon(64, 1)],
+    ['apple-touch-icon.png', await icon(180, 0.82, bg)],
+    ['pwa-192.png', await icon(192, 0.82, bg)],
+    ['pwa-512.png', await icon(512, 0.82, bg)],
+    ['pwa-maskable-512.png', await icon(512, 0.62, bg)],
   ];
-  for (const [name, source] of jobs) {
-    const png = await sharp(Buffer.from(source)).png().toBuffer();
+  for (const [name, png] of jobs) {
     writeFileSync(join(out, name), png);
     console.log(`${site}/${name} (${(png.length / 1024).toFixed(0)} KB)`);
   }
+  // The old vector placeholder.
+  const legacy = join(out, 'favicon.svg');
+  if (existsSync(legacy)) unlinkSync(legacy);
 }

@@ -66,7 +66,7 @@ export default function Auth({ initialMode = 'signin' }: { initialMode?: 'signin
     <div className="container-x grid min-h-[80vh] items-center py-12">
       <Seo title={mode === 'signup' ? 'Create account' : 'Sign in'} noindex />
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="mx-auto w-full max-w-md rounded-[28px] border border-line bg-white p-7 shadow-soft sm:p-9">
-        <div className="mb-6 flex justify-center"><Logo /></div>
+        <div className="mb-6 flex justify-center"><Logo size="lg" /></div>
         {!configured && <p className="mb-4 rounded-xl bg-danger/10 px-4 py-3 text-[13px] text-danger">Not configured yet — copy <code>.env.example</code> to <code>.env.local</code> and set <code>VITE_NEON_URL</code> and <code>VITE_API_URL</code>.</p>}
         {mode !== 'reset' && (
           <Tabs tabs={[{ value: 'signin', label: 'Sign in' }, { value: 'signup', label: 'Create account' }]} value={mode as 'signin' | 'signup'} onChange={(v) => setMode(v)} className="mb-6 justify-center" />
