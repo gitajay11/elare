@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react';
 import { adminApi } from '@/lib/api';
 import { type Coupon } from '@elare/types';
-import { money, formatDate } from '@elare/utils';
+import { money, formatDate, couponValueLabel } from '@elare/utils';
 import { toast, Button, Input, Select, Toggle, Checkbox, Badge, Skeleton, Modal, Confirm } from '@elare/ui';
 import { AdminHeader, Table } from '@/components/AdminLayout';
 
@@ -39,7 +39,7 @@ export default function AdminCoupons() {
           {data.map((c) => (
             <tr key={c.id} className="hover:bg-ivory">
               <td className="px-4 py-3"><button type="button" onClick={() => setEditing(c)} className="font-semibold tracking-[0.06em] hover:text-rose">{c.code}</button><span className="block text-[11px] text-mist">{c.description}</span></td>
-              <td className="px-4 py-3">{c.type === 'percentage' ? `${Number(c.value)}%` : money(c.value)}{c.max_discount ? <span className="block text-[11px] text-mist">max {money(c.max_discount)}</span> : null}</td>
+              <td className="px-4 py-3">{couponValueLabel(c)}{c.max_discount ? <span className="block text-[11px] text-mist">max {money(c.max_discount)}</span> : null}</td>
               <td className="px-4 py-3 text-[12px] text-ink-soft">{c.min_order_value > 0 && <span className="block">Min {money(c.min_order_value)}</span>}{c.scope !== 'all' && <span className="block capitalize">{c.scope} only</span>}{c.first_order_only && <span className="block">First order</span>}{c.expires_at && <span className="block">Until {formatDate(c.expires_at)}</span>}</td>
               <td className="px-4 py-3">{c.times_used ?? 0}{c.usage_limit ? ` / ${c.usage_limit}` : ''}<span className="block text-[11px] text-mist">{c.per_user_limit}× per customer</span></td>
               <td className="px-4 py-3">{money(c.revenue ?? 0)}</td>
@@ -57,8 +57,10 @@ export default function AdminCoupons() {
           <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
             <Input label="Code" required value={editing.code ?? ''} onChange={(e) => setEditing({ ...editing, code: e.target.value.toUpperCase() })} className="uppercase tracking-[0.08em]" />
             <Input label="Description" value={editing.description ?? ''} onChange={(e) => setEditing({ ...editing, description: e.target.value })} />
-            <Select label="Type" value={editing.type} onChange={(e) => setEditing({ ...editing, type: e.target.value as Coupon['type'] })}><option value="percentage">Percentage</option><option value="fixed">Fixed amount</option></Select>
-            <Input label={editing.type === 'percentage' ? 'Percent off' : 'Amount off (₹)'} type="number" min={0.01} step="0.01" required value={editing.value ?? ''} onChange={(e) => setEditing({ ...editing, value: Number(e.target.value) })} />
+            <Select label="Type" value={editing.type} onChange={(e) => { const type = e.target.value as Coupon['type']; setEditing({ ...editing, type, value: type === 'free_shipping' ? 0 : editing.value || 10, max_discount: type === 'free_shipping' ? null : editing.max_discount }); }}><option value="percentage">Percentage</option><option value="fixed">Fixed amount</option><option value="free_shipping">Free delivery</option></Select>
+            {editing.type === 'free_shipping'
+              ? <p className="self-end pb-2 text-[12.5px] text-mist">Waives the delivery fee; nothing off the items.</p>
+              : <Input label={editing.type === 'percentage' ? 'Percent off' : 'Amount off (₹)'} type="number" min={0.01} step="0.01" required value={editing.value ?? ''} onChange={(e) => setEditing({ ...editing, value: Number(e.target.value) })} />}
             <Input label="Minimum order (₹)" type="number" min={0} value={editing.min_order_value ?? 0} onChange={(e) => setEditing({ ...editing, min_order_value: Number(e.target.value) })} />
             <Input label="Maximum discount (₹)" type="number" min={0} value={editing.max_discount ?? ''} onChange={(e) => setEditing({ ...editing, max_discount: e.target.value ? Number(e.target.value) : null })} hint="Leave blank for no cap." />
             <Select label="Applies to" value={editing.scope} onChange={(e) => setEditing({ ...editing, scope: e.target.value as Coupon['scope'] })}><option value="all">Whole order</option><option value="categories">Specific categories</option><option value="products">Specific products</option></Select>

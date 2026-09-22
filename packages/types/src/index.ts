@@ -6,6 +6,8 @@ export type OrderStatus =
   | 'delivered' | 'cancelled' | 'refund_requested' | 'refund_initiated' | 'refund_processing' | 'refunded';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'cod';
 export type PaymentMethod = 'razorpay' | 'cod' | 'points';
+/** percentage / fixed take an amount off the items; free_shipping waives the delivery fee instead. */
+export type CouponType = 'percentage' | 'fixed' | 'free_shipping';
 
 export interface Shade { id: string; name: string; hex: string; undertone?: string | null; description?: string | null }
 export interface ImageRef { url: string; alt: string }
@@ -84,7 +86,7 @@ export interface ProductDetail {
   rating_distribution: Record<string, number>;
   reviews: Review[];
   recommendations: { also_like: ProductCard[]; complete_look: ProductCard[]; bought_together: ProductCard[] };
-  coupons: { code: string; description: string | null; type: 'percentage' | 'fixed'; value: number; min_order_value: number }[];
+  coupons: { code: string; description: string | null; type: CouponType; value: number; min_order_value: number }[];
   can_review: boolean;
   my_review: { id: string; rating: number; title: string | null; body: string; status: string } | null;
   breadcrumb: ({ name: string; slug: string } | null)[];
@@ -172,7 +174,7 @@ export interface Quote {
   issues: { variant_id: string; code: string; message: string; available?: number }[];
   item_count: number;
   subtotal: number;
-  coupon: { valid: boolean; code: string | null; discount: number; message: string | null; description?: string | null; coupon_id?: string };
+  coupon: { valid: boolean; code: string | null; discount: number; free_shipping?: boolean; message: string | null; description?: string | null; coupon_id?: string };
   gift: { unlocked: boolean; rule: { id: string; name: string; product_name: string; quantity: number; min_quantity: number; image: string | null } | null; next: { name: string; product_name: string; min_quantity: number; remaining: number; image: string | null } | null; line: QuoteLine | null };
   points: { balance: number; redeemable_max: number; requested: number; applied: number; discount: number; point_value: number; min_redeem: number; message: string | null; enabled: boolean };
   discount_total: number;
@@ -279,7 +281,7 @@ export interface Coupon {
   id: string;
   code: string;
   description: string | null;
-  type: 'percentage' | 'fixed';
+  type: CouponType;
   value: number;
   min_order_value: number;
   max_discount: number | null;

@@ -8,7 +8,7 @@ export const orderStatus = pgEnum('order_status', [
 ]);
 export const paymentStatus = pgEnum('payment_status', ['pending', 'paid', 'failed', 'refunded', 'cod']);
 export const paymentMethod = pgEnum('payment_method', ['razorpay', 'cod', 'points']);
-export const couponType = pgEnum('coupon_type', ['percentage', 'fixed']);
+export const couponType = pgEnum('coupon_type', ['percentage', 'fixed', 'free_shipping']);
 export const couponScope = pgEnum('coupon_scope', ['all', 'products', 'categories']);
 export const reviewStatus = pgEnum('review_status', ['pending', 'approved', 'hidden']);
 export const loyaltyTxType = pgEnum('loyalty_tx_type', ['earn', 'redeem', 'adjust', 'reversal', 'expire']);

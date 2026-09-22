@@ -177,7 +177,7 @@ export function Totals({ quote, loading, className }: { quote: Quote | undefined
   if (!quote) return <div className={cn('space-y-2', className)}><Skeleton className="h-4" /><Skeleton className="h-4 w-2/3" /><Skeleton className="h-6 w-1/2" /></div>;
   const rows: [string, string, boolean?][] = [
     ['Subtotal', money(quote.subtotal)],
-    ...(quote.coupon.valid ? [[`Coupon ${quote.coupon.code}`, `− ${money(quote.coupon.discount)}`, true] as [string, string, boolean]] : []),
+    ...(quote.coupon.valid ? [[`Coupon ${quote.coupon.code}`, quote.coupon.free_shipping ? 'Free delivery' : `− ${money(quote.coupon.discount)}`, true] as [string, string, boolean]] : []),
     ...(quote.points.applied > 0 ? [[`${quote.points.applied} points`, `− ${money(quote.points.discount)}`, true] as [string, string, boolean]] : []),
     ['Shipping', quote.shipping === 0 ? 'Free' : money(quote.shipping)],
     ...(!quote.tax_inclusive && quote.tax > 0 ? [['Tax', money(quote.tax)] as [string, string]] : []),

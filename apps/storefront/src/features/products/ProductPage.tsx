@@ -8,7 +8,7 @@ import { api } from '@/lib/api';
 import { type ProductDetail, type Review } from '@elare/types';
 import { Seo, breadcrumbSchema, fadeUp, stagger, viewportOnce, useAuth, Button, Badge, Breadcrumb, Price, QuantityStepper, Rating, SectionHeading, Stars, Swatch, Accordion, Input, Textarea, PageLoader } from '@elare/ui';
 import { SITE_URL } from '@/lib/neon';
-import { imageUrl, money, socialProof, formatDate, cn } from '@elare/utils';
+import { imageUrl, money, socialProof, formatDate, cn, couponValueLabel } from '@elare/utils';
 import { useAddToCart, useStoreConfig } from '@/lib/hooks';
 import { useRecent } from '@/features/products/recent-store';
 import { toast } from '@/lib/ui-store';
@@ -170,7 +170,7 @@ function ProductView({ detail }: { detail: ProductDetail }) {
                 {detail.coupons.map((c) => (
                   <div key={c.code} className="flex items-center gap-3 rounded-xl border border-dashed border-rose/40 bg-blush/30 px-4 py-2.5 text-[13px]">
                     <Tag size={14} className="text-rose" />
-                    <span className="flex-1">{c.description ?? (c.type === 'percentage' ? `${c.value}% off` : `${money(c.value)} off`)}{c.min_order_value > 0 && <span className="text-mist"> · min. {money(c.min_order_value)}</span>}</span>
+                    <span className="flex-1">{c.description ?? (c.type === 'free_shipping' ? 'Free delivery' : `${couponValueLabel(c)} off`)}{c.min_order_value > 0 && <span className="text-mist"> · min. {money(c.min_order_value)}</span>}</span>
                     <button type="button" onClick={() => { navigator.clipboard?.writeText(c.code); toast({ title: `Code ${c.code} copied` }); }} className="rounded-full bg-white px-3 py-1 font-semibold tracking-[0.08em] text-rose">{c.code}</button>
                   </div>
                 ))}

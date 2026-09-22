@@ -160,6 +160,15 @@ ok(quote.coupon.valid && quote.coupon.discount === 134.85, 'coupon: category sco
 quote = await rpc('quote_cart', { p_items: [{ variant_id: lipstick.id, quantity: 1 }], p_coupon_code: 'BOGUS' });
 ok(!quote.coupon.valid && quote.coupon.message.includes('not valid'), 'coupon: unknown code');
 
+// free-shipping coupon: nothing off the items, shipping line becomes 0
+await db.query(`insert into coupons (code, description, type, value, per_user_limit, is_active) values ('FREESHIP', 'Free delivery', 'free_shipping', 0, 5, true)`);
+quote = await rpc('quote_cart', { p_items: [{ variant_id: liner1.id, quantity: 1 }] });
+const shipBefore = quote.shipping;
+ok(shipBefore > 0, 'shipping: charged below the free-delivery threshold', quote.shipping);
+quote = await rpc('quote_cart', { p_items: [{ variant_id: liner1.id, quantity: 1 }], p_coupon_code: 'freeship' });
+ok(quote.coupon.valid && quote.coupon.free_shipping === true && quote.coupon.discount === 0, 'coupon: free_shipping is valid with no discount', quote.coupon);
+ok(quote.shipping === 0 && quote.total === quote.subtotal, 'coupon: free_shipping zeroes the shipping line', { shipping: quote.shipping, total: quote.total, subtotal: quote.subtotal });
+
 // free gift
 quote = await rpc('quote_cart', { p_items: [{ variant_id: lipstick.id, quantity: 3 }, { variant_id: liner1.id, quantity: 2 }] });
 ok(!quote.gift.unlocked && quote.gift.next.remaining === 1, 'gift: 5 items → 1 more to unlock', quote.gift);
