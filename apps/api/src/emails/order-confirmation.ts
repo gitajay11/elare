@@ -78,20 +78,27 @@ function button(href: string, label: string, primary = true): string {
 }
 
 function timeline(): string {
+  // Each step is [left connector | dot | right connector] so the line runs
+  // through the centre of every dot regardless of the client's line-height.
   const cells = STEPS.map((label, i) => {
     const active = i === 0;
+    const first = i === 0;
+    const last = i === STEPS.length - 1;
     const dot = active
-      ? `<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${C.rose};box-shadow:0 0 0 4px ${C.blush};"></span>`
-      : `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${C.white};border:2px solid ${C.blushDeep};"></span>`;
-    return `<td align="center" valign="top" style="width:25%;padding:0;">
-      <div style="line-height:14px;height:14px;">${dot}</div>
-      <div style="font-family:${SANS};font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:${active ? C.ink : C.mist};font-weight:${active ? 700 : 600};margin-top:10px;">${label}</div>
+      ? `<span style="display:block;width:16px;height:16px;border-radius:50%;background:${C.rose};box-shadow:0 0 0 4px ${C.blush};"></span>`
+      : `<span style="display:block;width:12px;height:12px;border-radius:50%;background:${C.white};border:2px solid ${C.blushDeep};"></span>`;
+    const seg = (visible: boolean, fade = false) =>
+      `<td valign="middle" style="padding:0;"><div style="height:2px;line-height:2px;font-size:2px;background:${visible ? (fade ? `linear-gradient(90deg,${C.rose},${C.blushDeep})` : C.blushDeep) : 'transparent'};">&nbsp;</div></td>`;
+    return `<td valign="top" style="width:25%;padding:0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        ${seg(!first)}
+        <td width="${active ? 24 : 16}" valign="middle" style="padding:0 4px;">${dot}</td>
+        ${seg(!last, active)}
+      </tr></table>
+      <div style="font-family:${SANS};font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:${active ? C.ink : C.mist};font-weight:${active ? 700 : 600};margin-top:12px;text-align:center;">${label}</div>
     </td>`;
   }).join('');
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="position:relative;">
-    <tr><td colspan="4" style="padding:0 12.5%;"><div style="height:2px;background:linear-gradient(90deg,${C.rose} 0,${C.rose} 12%,${C.blushDeep} 12%,${C.blushDeep} 100%);margin-bottom:-8px;"></div></td></tr>
-    <tr>${cells}</tr>
-  </table>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${cells}</tr></table>`;
 }
 
 function itemRow(i: OrderEmailItem): string {
