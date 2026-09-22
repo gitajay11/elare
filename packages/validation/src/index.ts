@@ -108,7 +108,7 @@ export const couponSchema = z.object({
   id: uuid.optional(),
   code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{3,32}$/, 'Codes are 3–32 letters, digits, - or _'),
   description: z.string().trim().max(160).nullable().optional(),
-  type: z.enum(['percentage', 'fixed', 'free_shipping']),
+  type: z.enum(['percentage', 'fixed', 'free_shipping', 'set_total']),
   value: z.number().nonnegative(),
   min_order_value: z.number().nonnegative().default(0),
   max_discount: z.number().positive().nullable().optional(),

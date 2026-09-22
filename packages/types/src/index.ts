@@ -6,8 +6,12 @@ export type OrderStatus =
   | 'delivered' | 'cancelled' | 'refund_requested' | 'refund_initiated' | 'refund_processing' | 'refunded';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'cod';
 export type PaymentMethod = 'razorpay' | 'cod' | 'points';
-/** percentage / fixed take an amount off the items; free_shipping waives the delivery fee instead. */
-export type CouponType = 'percentage' | 'fixed' | 'free_shipping';
+/**
+ * percentage / fixed take an amount off the items; free_shipping waives the
+ * delivery fee; set_total discounts the bag down to `value` with free delivery
+ * (for testing payments).
+ */
+export type CouponType = 'percentage' | 'fixed' | 'free_shipping' | 'set_total';
 
 export interface Shade { id: string; name: string; hex: string; undertone?: string | null; description?: string | null }
 export interface ImageRef { url: string; alt: string }

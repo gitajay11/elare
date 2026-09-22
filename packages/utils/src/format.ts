@@ -54,7 +54,8 @@ export function shadeContrast(hex: string): 'light' | 'dark' {
 }
 
 /** "15%", "₹200" or "Free delivery" — the headline of a coupon. */
-export function couponValueLabel(c: { type: 'percentage' | 'fixed' | 'free_shipping'; value: number | string }): string {
+export function couponValueLabel(c: { type: 'percentage' | 'fixed' | 'free_shipping' | 'set_total'; value: number | string }): string {
   if (c.type === 'free_shipping') return 'Free delivery';
+  if (c.type === 'set_total') return `Pay ${money(c.value)}`;
   return c.type === 'percentage' ? `${Number(c.value)}%` : money(c.value);
 }

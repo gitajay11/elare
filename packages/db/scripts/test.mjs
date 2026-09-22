@@ -169,6 +169,12 @@ quote = await rpc('quote_cart', { p_items: [{ variant_id: liner1.id, quantity: 1
 ok(quote.coupon.valid && quote.coupon.free_shipping === true && quote.coupon.discount === 0, 'coupon: free_shipping is valid with no discount', quote.coupon);
 ok(quote.shipping === 0 && quote.total === quote.subtotal, 'coupon: free_shipping zeroes the shipping line', { shipping: quote.shipping, total: quote.total, subtotal: quote.subtotal });
 
+// set_total coupon: bag becomes ₹1 all-in
+await db.query(`insert into coupons (code, description, type, value, per_user_limit, is_active) values ('TESTPAY', 'Pay ₹1', 'set_total', 1, 5, true)`);
+quote = await rpc('quote_cart', { p_items: [{ variant_id: lipstick.id, quantity: 2 }, { variant_id: liner1.id, quantity: 1 }], p_coupon_code: 'testpay' });
+ok(quote.coupon.valid && quote.coupon.free_shipping === true && quote.coupon.discount === quote.subtotal - 1, 'coupon: set_total discounts down to ₹1', quote.coupon);
+ok(quote.shipping === 0 && quote.total === 1, 'coupon: set_total total is exactly ₹1', { shipping: quote.shipping, total: quote.total });
+
 // free gift
 quote = await rpc('quote_cart', { p_items: [{ variant_id: lipstick.id, quantity: 3 }, { variant_id: liner1.id, quantity: 2 }] });
 ok(!quote.gift.unlocked && quote.gift.next.remaining === 1, 'gift: 5 items → 1 more to unlock', quote.gift);

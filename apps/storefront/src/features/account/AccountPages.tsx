@@ -65,7 +65,7 @@ export function Coupons() {
       <ul className="grid gap-3 sm:grid-cols-2">
         {data.map((c) => (
           <li key={c.id} className={cn('relative overflow-hidden rounded-2xl border border-dashed p-5', c.used ? 'border-line opacity-60' : 'border-rose bg-blush/20')}>
-            <p className="font-display text-3xl">{couponValueLabel(c)}{c.type !== 'free_shipping' && ' off'}</p>
+            <p className="font-display text-3xl">{couponValueLabel(c)}{(c.type === 'percentage' || c.type === 'fixed') && ' off'}</p>
             <p className="mt-1 text-sm text-ink-soft">{c.description}</p>
             <p className="mt-2 text-[12px] text-mist">{c.min_order_value > 0 && `Min. order ${money(c.min_order_value)}. `}{c.max_discount && `Up to ${money(c.max_discount)}. `}{c.first_order_only && 'First order only. '}{c.expires_at ? `Expires ${formatDate(c.expires_at)}.` : ''}</p>
             <div className="mt-4 flex items-center justify-between">
