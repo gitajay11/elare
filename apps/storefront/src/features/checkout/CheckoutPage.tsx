@@ -149,20 +149,20 @@ function CheckoutFlow({ userEmail, userName, userPhone }: { userEmail: string; u
         </div>
       </header>
 
-      <div className="container-x grid gap-6 py-6 lg:grid-cols-[1fr_400px] lg:gap-16 lg:py-12">
-        <div>
-          <ol className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.14em]" aria-label="Checkout steps">
+      <div className="container-x grid grid-cols-[minmax(0,1fr)] gap-6 py-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-16 lg:py-12">
+        <div className="min-w-0">
+          <ol className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] sm:gap-2 sm:text-[12px] sm:tracking-[0.14em]" aria-label="Checkout steps">
             {STEPS.map((s, i) => (
-              <li key={s.key} className="flex items-center gap-2">
-                <button type="button" disabled={i > stepIndex} onClick={() => setStep(s.key)} className={cn('inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors', i === stepIndex ? 'bg-ink text-white' : i < stepIndex ? 'bg-blush text-rose-deep' : 'text-mist')}>
+              <li key={s.key} className={cn('flex min-w-0 items-center gap-1.5 sm:gap-2', i < STEPS.length - 1 && 'flex-1')}>
+                <button type="button" disabled={i > stepIndex} onClick={() => setStep(s.key)} aria-current={i === stepIndex ? 'step' : undefined} className={cn('inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1.5 transition-colors sm:px-3', i === stepIndex ? 'bg-ink text-white' : i < stepIndex ? 'bg-blush text-rose-deep' : 'text-mist')}>
                   {i < stepIndex ? <Check size={12} /> : s.icon} {s.label}
                 </button>
-                {i < STEPS.length - 1 && <span className="h-px w-6 bg-line" />}
+                {i < STEPS.length - 1 && <span className="h-px min-w-2 flex-1 bg-line" />}
               </li>
             ))}
           </ol>
 
-          <motion.div key={step} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.35, ease: [0.22, 0.61, 0.36, 1] }} className="mt-8">
+          <motion.div key={step} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 0.61, 0.36, 1] }} className="mt-8 min-w-0">
               {step === 'address' && (
                 <section aria-labelledby="address-heading">
                   <h1 id="address-heading" className="text-[2rem] sm:text-[2.4rem]">Where should we send it?</h1>
@@ -248,7 +248,7 @@ function CheckoutFlow({ userEmail, userName, userPhone }: { userEmail: string; u
             </motion.div>
         </div>
 
-        <aside className="order-first lg:order-none lg:sticky lg:top-8 lg:self-start">
+        <aside className="order-first min-w-0 lg:order-none lg:sticky lg:top-8 lg:self-start">
           <div className="rounded-3xl border border-line bg-white p-4 lg:p-5">
             <button type="button" onClick={() => setSummaryOpen((o) => !o)} aria-expanded={summaryOpen} aria-controls="order-summary" className="flex w-full items-center justify-between gap-3 text-left lg:hidden">
               <span className="font-display text-xl">Order summary <span className="font-sans text-[12.5px] text-mist">· {items.reduce((n, i) => n + i.quantity, 0)} item{items.reduce((n, i) => n + i.quantity, 0) === 1 ? '' : 's'}</span></span>

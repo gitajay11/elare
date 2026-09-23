@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   BarChart3, Boxes, ExternalLink, Gift, LayoutDashboard, LogOut, Package, Settings, ShoppingBag, Sparkles, Star, Tag, Tags, Users, X, type LucideIcon,
 } from 'lucide-react';
-import { InstallButton, Logo, ThemeToggle } from '@elare/ui';
+import { InstallButton, Logo, ThemeToggle, useLockScroll } from '@elare/ui';
 import { cn } from '@elare/utils';
 import { adminApi } from '@/lib/api';
 import { STORE_URL } from '@/lib/neon';
@@ -133,12 +133,12 @@ export function Sidebar({ name, email, onLogout }: { name: string; email: string
 export function MobileNav({ open, onClose, name, email, onLogout }: { open: boolean; onClose: () => void; name: string; email: string; onLogout: () => void }) {
   const location = useLocation();
   useEffect(() => { onClose(); }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+  useLockScroll(open);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
+    return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
   return (
     <AnimatePresence>
@@ -149,13 +149,13 @@ export function MobileNav({ open, onClose, name, email, onLogout }: { open: bool
             role="dialog"
             aria-label="Admin menu"
             initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'spring', stiffness: 380, damping: 38 }}
-            className="fixed inset-y-0 left-0 z-50 flex w-[300px] max-w-[88vw] flex-col bg-white shadow-2xl lg:hidden"
+            className="fixed inset-y-0 left-0 z-50 flex w-[300px] max-w-[88vw] flex-col overscroll-contain bg-white shadow-2xl lg:hidden"
           >
             <div className="flex items-center justify-between px-5 pt-5">
               <Logo />
               <button type="button" aria-label="Close menu" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full hover:bg-blush/60"><X size={20} /></button>
             </div>
-            <div className="flex-1 overflow-y-auto px-3 pt-6"><NavItems layoutId="admin-nav-mobile" onNavigate={onClose} /></div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-6"><NavItems layoutId="admin-nav-mobile" onNavigate={onClose} /></div>
             <div className="px-4 pb-5"><Footer name={name} email={email} onLogout={onLogout} /></div>
           </motion.aside>
         </>

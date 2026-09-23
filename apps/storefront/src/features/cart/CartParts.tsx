@@ -42,7 +42,7 @@ export function CartLines({ lines, compact, onNavigate }: { lines: QuoteLine[]; 
             layout
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, x: 24, transition: { duration: 0.2 } }}
+            exit={{ opacity: 0, height: 0, paddingTop: 0, paddingBottom: 0, transition: { duration: 0.2 } }}
             className={cn('flex gap-4 py-4', l.issue && 'opacity-90')}
           >
             <Link to={l.slug ? `/product/${l.slug}` : '#'} onClick={onNavigate} className="relative h-24 w-20 shrink-0 overflow-hidden rounded-xl bg-nude">

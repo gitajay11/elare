@@ -222,13 +222,15 @@ export function AdminProductEditor() {
           <Card title="Images" action={<label className={cn('inline-flex h-9 cursor-pointer items-center gap-2 rounded-full bg-blush px-4 text-[13px] font-semibold text-rose-deep', uploading && 'opacity-50')}><Upload size={14} /> {uploading ? 'Uploading…' : 'Upload'}<input type="file" accept="image/*,video/mp4" multiple className="hidden" onChange={(e) => upload(e.target.files)} /></label>}>
             <div className="space-y-2">
               {images.map((img, i) => (
-                <div key={i} className="grid grid-cols-[auto_auto_1fr_1fr_140px_auto] items-center gap-2">
-                  <GripVertical size={14} className="text-mist" />
+                <div key={i} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 rounded-xl border border-line p-2 sm:grid-cols-[auto_auto_minmax(0,1fr)_minmax(0,1fr)_140px_auto] sm:items-center sm:rounded-none sm:border-0 sm:p-0">
+                  <GripVertical size={14} className="hidden text-mist sm:block" />
                   <span className="h-12 w-10 overflow-hidden rounded-md bg-nude"><img src={img.url} alt="" className="h-full w-full object-cover" /></span>
-                  <input value={img.url} onChange={(e) => setImages((arr) => arr.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))} placeholder="https://…" className="h-10 rounded-xl border border-line px-3 text-sm" />
-                  <input value={img.alt} onChange={(e) => setImages((arr) => arr.map((x, j) => (j === i ? { ...x, alt: e.target.value } : x)))} placeholder="Alt text" className="h-10 rounded-xl border border-line px-3 text-sm" />
-                  <select value={img.shade_id ?? ''} onChange={(e) => setImages((arr) => arr.map((x, j) => (j === i ? { ...x, shade_id: e.target.value || null } : x)))} className="h-10 rounded-xl border border-line bg-white px-2 text-sm"><option value="">All shades</option>{shades.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-                  <div className="flex gap-1"><button type="button" disabled={i === 0} onClick={() => setImages((arr) => { const c = [...arr]; [c[i - 1], c[i]] = [c[i], c[i - 1]]; return c; })} className="text-mist disabled:opacity-30">↑</button><button type="button" onClick={() => setImages((arr) => arr.filter((_, j) => j !== i))} className="text-mist hover:text-danger"><Trash2 size={15} /></button></div>
+                  <div className="grid min-w-0 gap-2 sm:contents">
+                  <input value={img.url} onChange={(e) => setImages((arr) => arr.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))} placeholder="https://…" aria-label="Image URL" className="h-10 w-full min-w-0 rounded-xl border border-line px-3 text-sm" />
+                  <input value={img.alt} onChange={(e) => setImages((arr) => arr.map((x, j) => (j === i ? { ...x, alt: e.target.value } : x)))} placeholder="Alt text" aria-label="Alt text" className="h-10 w-full min-w-0 rounded-xl border border-line px-3 text-sm" />
+                  <select value={img.shade_id ?? ''} onChange={(e) => setImages((arr) => arr.map((x, j) => (j === i ? { ...x, shade_id: e.target.value || null } : x)))} aria-label="Shade" className="h-10 w-full min-w-0 rounded-xl border border-line bg-white px-2 text-sm"><option value="">All shades</option>{shades.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+                  </div>
+                  <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-1"><button type="button" aria-label="Move up" disabled={i === 0} onClick={() => setImages((arr) => { const c = [...arr]; [c[i - 1], c[i]] = [c[i], c[i - 1]]; return c; })} className="text-mist disabled:opacity-30">↑</button><button type="button" onClick={() => setImages((arr) => arr.filter((_, j) => j !== i))} className="text-mist hover:text-danger"><Trash2 size={15} /></button></div>
                 </div>
               ))}
               <Button size="sm" variant="ghost" icon={<Plus size={14} />} onClick={() => setImages((arr) => [...arr, { url: '', alt: product.name, shade_id: null }])}>Add image URL</Button>
@@ -238,8 +240,8 @@ export function AdminProductEditor() {
           <Card title="Bundle contents" action={<Button size="sm" variant="soft" icon={<Plus size={14} />} onClick={() => setBundle((b) => [...b, { variant_id: '', quantity: 1 }])}>Add component</Button>}>
             <p className="mb-3 text-[12.5px] text-mist">For combos such as the Lip Edit: the variants included in this product.</p>
             {bundle.map((b, i) => (
-              <div key={i} className="mb-2 grid grid-cols-[1fr_80px_auto] gap-2">
-                <select value={b.variant_id} onChange={(e) => setBundle((arr) => arr.map((x, j) => (j === i ? { ...x, variant_id: e.target.value } : x)))} className="h-10 rounded-xl border border-line bg-white px-2 text-sm"><option value="">Choose a variant</option>{variantOptions?.filter((o) => o.product_id !== id).map((o) => <option key={o.variant_id} value={o.variant_id}>{o.label} — {money(o.price)}</option>)}</select>
+              <div key={i} className="mb-2 grid grid-cols-[minmax(0,1fr)_72px_auto] items-center gap-2">
+                <select value={b.variant_id} onChange={(e) => setBundle((arr) => arr.map((x, j) => (j === i ? { ...x, variant_id: e.target.value } : x)))} className="h-10 w-full min-w-0 rounded-xl border border-line bg-white px-2 text-sm"><option value="">Choose a variant</option>{variantOptions?.filter((o) => o.product_id !== id).map((o) => <option key={o.variant_id} value={o.variant_id}>{o.label} — {money(o.price)}</option>)}</select>
                 <input type="number" min={1} value={b.quantity} onChange={(e) => setBundle((arr) => arr.map((x, j) => (j === i ? { ...x, quantity: Number(e.target.value) } : x)))} className="h-10 rounded-xl border border-line px-3 text-sm" />
                 <button type="button" onClick={() => setBundle((arr) => arr.filter((_, j) => j !== i))} className="text-mist hover:text-danger"><Trash2 size={15} /></button>
               </div>
@@ -248,9 +250,9 @@ export function AdminProductEditor() {
 
           <Card title="Recommendations" action={<Button size="sm" variant="soft" icon={<Plus size={14} />} onClick={() => setRecs((r) => [...r, { product_id: '', kind: 'complete_look' }])}>Add</Button>}>
             {recs.map((r, i) => (
-              <div key={i} className="mb-2 grid grid-cols-[1fr_160px_auto] gap-2">
-                <select value={r.product_id} onChange={(e) => setRecs((arr) => arr.map((x, j) => (j === i ? { ...x, product_id: e.target.value } : x)))} className="h-10 rounded-xl border border-line bg-white px-2 text-sm"><option value="">Choose a product</option>{Array.from(new Map(variantOptions?.map((o) => [o.product_id, o.label.split(' · ')[0]])).entries()).filter(([pid]) => pid !== id).map(([pid, name]) => <option key={pid} value={pid}>{name}</option>)}</select>
-                <select value={r.kind} onChange={(e) => setRecs((arr) => arr.map((x, j) => (j === i ? { ...x, kind: e.target.value } : x)))} className="h-10 rounded-xl border border-line bg-white px-2 text-sm"><option value="complete_look">Complete your look</option><option value="also_like">You may also like</option><option value="bundle">Natural bundle (home)</option></select>
+              <div key={i} className="mb-2 grid grid-cols-[minmax(0,1fr)_minmax(0,9rem)_auto] items-center gap-2">
+                <select value={r.product_id} onChange={(e) => setRecs((arr) => arr.map((x, j) => (j === i ? { ...x, product_id: e.target.value } : x)))} className="h-10 w-full min-w-0 rounded-xl border border-line bg-white px-2 text-sm"><option value="">Choose a product</option>{Array.from(new Map(variantOptions?.map((o) => [o.product_id, o.label.split(' · ')[0]])).entries()).filter(([pid]) => pid !== id).map(([pid, name]) => <option key={pid} value={pid}>{name}</option>)}</select>
+                <select value={r.kind} onChange={(e) => setRecs((arr) => arr.map((x, j) => (j === i ? { ...x, kind: e.target.value } : x)))} className="h-10 w-full min-w-0 rounded-xl border border-line bg-white px-2 text-sm"><option value="complete_look">Complete your look</option><option value="also_like">You may also like</option><option value="bundle">Natural bundle (home)</option></select>
                 <button type="button" onClick={() => setRecs((arr) => arr.filter((_, j) => j !== i))} className="text-mist hover:text-danger"><Trash2 size={15} /></button>
               </div>
             ))}

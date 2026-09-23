@@ -79,8 +79,14 @@
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     line-height: 1.55;
-    overflow-x: hidden;
   }
+  /* Nothing may pan the page sideways on a phone. `clip` (unlike `hidden`)
+     creates no scroll container, so position: sticky keeps working. */
+  html, body { overflow-x: hidden; }
+  @supports (overflow: clip) { html, body { overflow-x: clip; } }
+  html { overscroll-behavior-x: none; }
+  /* Installed app: no rubber-band bounce or pull-to-refresh on the shell. */
+  @media (display-mode: standalone) { html, body { overscroll-behavior-y: none; } }
   h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: -0.01em; }
   h1, h2, h3 { font-weight: 500; line-height: 1.05; }
   a { color: inherit; text-decoration: none; }

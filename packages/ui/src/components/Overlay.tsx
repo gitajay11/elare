@@ -6,13 +6,33 @@ import { cn } from '@elare/utils';
 import { drawer, overlay } from '../motion';
 import { IconButton } from './Button';
 
-function useLockScroll(active: boolean) {
+let locks = 0;
+let savedY = 0;
+
+/**
+ * Freezes the page behind an overlay. iOS ignores `overflow: hidden` on the
+ * body, so the body is pinned with position: fixed at the current offset and
+ * the scroll position restored on release. Counted, so stacked overlays
+ * (drawer + modal) release only when the last one closes.
+ */
+export function useLockScroll(active: boolean) {
   useEffect(() => {
     if (!active) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    if (locks++ === 0) {
+      savedY = window.scrollY;
+      const b = document.body.style;
+      b.position = 'fixed';
+      b.top = `-${savedY}px`;
+      b.left = '0';
+      b.right = '0';
+      b.width = '100%';
+      b.overflow = 'hidden';
+    }
     return () => {
-      document.body.style.overflow = prev;
+      if (--locks > 0) return;
+      const b = document.body.style;
+      b.position = b.top = b.left = b.right = b.width = b.overflow = '';
+      window.scrollTo({ top: savedY, behavior: 'instant' as ScrollBehavior });
     };
   }, [active]);
 }
@@ -61,7 +81,7 @@ export function Drawer({ open, onClose, title, children, footer, side = 'right',
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[90]" role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}>
+        <div className="fixed inset-0 z-[90] overflow-hidden overscroll-none" role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}>
           <motion.div className="absolute inset-0 bg-ink/35 backdrop-blur-[2px]" onClick={onClose} {...overlay} />
           <motion.div
             ref={ref}
@@ -72,8 +92,8 @@ export function Drawer({ open, onClose, title, children, footer, side = 'right',
               <div className="text-lg font-display">{title}</div>
               <IconButton label="Close" onClick={onClose}><X size={20} /></IconButton>
             </div>
-            <div className="flex-1 overflow-y-auto px-5 py-5">{children}</div>
-            {footer && <div className="border-t border-line bg-white px-5 py-4">{footer}</div>}
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-5 py-5">{children}</div>
+            {footer && <div className="border-t border-line bg-white px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">{footer}</div>}
           </motion.div>
         </div>
       )}
@@ -91,14 +111,14 @@ export function Modal({ open, onClose, title, children, size = 'md', className }
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[95] grid place-items-center p-4" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-[95] grid place-items-center overflow-hidden overscroll-none p-4" role="dialog" aria-modal="true">
           <motion.div className="absolute inset-0 bg-ink/40 backdrop-blur-[3px]" onClick={onClose} {...overlay} />
           <motion.div
             ref={ref}
             initial={{ opacity: 0, y: 18, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } }}
             exit={{ opacity: 0, y: 10, scale: 0.98, transition: { duration: 0.2 } }}
-            className={cn('relative max-h-[92vh] w-full overflow-y-auto rounded-3xl bg-ivory p-6 shadow-float sm:p-8', sizes[size], className)}
+            className={cn('relative max-h-[92dvh] w-full overflow-y-auto overflow-x-hidden overscroll-contain rounded-3xl bg-ivory p-6 shadow-float sm:p-8', sizes[size], className)}
           >
             <div className="mb-4 flex items-start justify-between gap-4">
               {title ? <h3 className="text-2xl">{title}</h3> : <span />}
