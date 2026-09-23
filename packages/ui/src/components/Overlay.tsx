@@ -40,7 +40,8 @@ export function useLockScroll(active: boolean) {
 function useEscape(active: boolean, onClose: () => void) {
   useEffect(() => {
     if (!active) return;
-    const h = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    // A dropdown inside the overlay handles its own Escape first.
+    const h = (e: KeyboardEvent) => e.key === 'Escape' && !e.defaultPrevented && onClose();
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, [active, onClose]);

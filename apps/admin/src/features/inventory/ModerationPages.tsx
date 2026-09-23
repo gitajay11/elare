@@ -22,7 +22,7 @@ export function AdminReviews() {
     <div>
       <AdminHeader title="Reviews" description="Every review is tied to a real customer account. Hidden reviews are excluded from ratings immediately." />
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-10 rounded-full border border-line bg-white px-4 text-sm"><option value="">All</option><option value="approved">Approved</option><option value="hidden">Hidden</option><option value="pending">Pending</option></select>
+        <Select variant="pill" aria-label="Filter reviews by status" value={status} onChange={(e) => setStatus(e.target.value)}><option value="">All reviews</option><option value="approved">Approved</option><option value="hidden">Hidden</option><option value="pending">Pending</option></Select>
         <Checkbox label="Verified purchases only" checked={verifiedOnly} onChange={(e) => setVerifiedOnly(e.target.checked)} />
       </div>
       {isLoading || !data ? <Skeleton className="h-64" /> : data.length ? (

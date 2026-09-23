@@ -4,7 +4,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { SlidersHorizontal, X, Search as SearchIcon } from 'lucide-react';
 import { api } from '@/lib/api';
 import { type Facets, type ListingFilters } from '@elare/types';
-import { Seo, breadcrumbSchema, Breadcrumb, EmptyState, Swatch, Button, Drawer, Checkbox } from '@elare/ui';
+import { Seo, breadcrumbSchema, Breadcrumb, EmptyState, Swatch, Button, Drawer, Checkbox, Select } from '@elare/ui';
 import { cn, money } from '@elare/utils';
 import { useStoreConfig } from '@/lib/hooks';
 import { ProductGrid } from '@/features/products/ProductGrid';
@@ -140,13 +140,13 @@ export default function Catalog({ mode }: { mode: Mode }) {
             <SlidersHorizontal size={16} /> Filters {activeCount > 0 && <span className="rounded-full bg-rose px-1.5 text-[10px] text-white">{activeCount}</span>}
           </button>
           <p className="hidden text-sm text-ink-soft lg:block">{activeCount > 0 ? <button type="button" onClick={clearAll} className="font-semibold text-rose underline-offset-4 hover:underline">Clear {activeCount} {activeCount === 1 ? 'filter' : 'filters'}</button> : 'Refine your edit'}</p>
-          <label className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-sm">
             <span className="text-mist">Sort</span>
-            <select value={sort} onChange={(e) => setParam('sort', e.target.value)} className="h-9 rounded-full border border-line bg-white px-3 text-sm font-medium outline-none focus:border-rose" aria-label="Sort products">
+            <Select variant="pill" size="sm" value={sort} onChange={(e) => setParam('sort', e.target.value)} aria-label="Sort products">
               {mode === 'search' && <option value="relevance">Relevance</option>}
               {SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
-          </label>
+            </Select>
+          </div>
         </div>
 
         <div className="mt-8 grid gap-10 lg:grid-cols-[250px_1fr]">

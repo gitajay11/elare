@@ -5,7 +5,7 @@ import { adminApi } from '@/lib/api';
 import { type OrderStatus } from '@elare/types';
 import { ORDER_STATUSES, ORDER_TRANSITIONS } from '@elare/config';
 import { money, formatDate, formatDateTime, ORDER_STATUS_LABEL, PAYMENT_LABEL, METHOD_LABEL, imageUrl } from '@elare/utils';
-import { toast, Button, Input, Skeleton, StatusPill, Swatch, OrderTimeline } from '@elare/ui';
+import { toast, Button, Input, Skeleton, StatusPill, Swatch, OrderTimeline, Select } from '@elare/ui';
 import { AdminHeader, Pager, Table } from '@/components/AdminLayout';
 import NotFound from '@/pages/NotFoundPage';
 
@@ -21,7 +21,7 @@ export function AdminOrders() {
       <AdminHeader title="Orders" description="Every status change is journaled; customers see the same status you set here." />
       <div className="mb-4 flex flex-wrap gap-2">
         <input value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} placeholder="Order number, name or email" className="h-10 w-72 rounded-full border border-line bg-white px-4 text-sm outline-none focus:border-rose" />
-        <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="h-10 rounded-full border border-line bg-white px-4 text-sm"><option value="">All statuses</option>{STATUSES.map((s) => <option key={s} value={s}>{ORDER_STATUS_LABEL[s]}</option>)}</select>
+        <Select variant="pill" searchable={false} aria-label="Filter orders by status" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}><option value="">All statuses</option>{STATUSES.map((s) => <option key={s} value={s}>{ORDER_STATUS_LABEL[s]}</option>)}</Select>
       </div>
       {isLoading || !data ? <Skeleton className="h-64" /> : (
         <>

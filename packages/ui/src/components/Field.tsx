@@ -1,4 +1,4 @@
-import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from 'react';
 import { cn } from '@elare/utils';
 
 const control =
@@ -13,7 +13,7 @@ interface FieldWrapProps {
   children: ReactNode;
 }
 
-function FieldWrap({ label, hint, error, id, className, children }: FieldWrapProps) {
+export function FieldWrap({ label, hint, error, id, className, children }: FieldWrapProps) {
   return (
     <div className={cn('space-y-1.5', className)}>
       {label && (
@@ -46,25 +46,6 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
     return (
       <FieldWrap label={label} hint={hint} error={error} id={id}>
         <textarea ref={ref} id={id} className={cn(control, 'min-h-[110px] py-3', error && 'border-danger', className)} aria-invalid={!!error} {...rest} />
-      </FieldWrap>
-    );
-  },
-);
-
-export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement> & { label?: ReactNode; hint?: ReactNode; error?: ReactNode }>(
-  function Select({ label, hint, error, className, id: idProp, children, ...rest }, ref) {
-    const auto = useId();
-    const id = idProp ?? auto;
-    return (
-      <FieldWrap label={label} hint={hint} error={error} id={id}>
-        <div className="relative">
-          <select ref={ref} id={id} className={cn(control, 'h-12 appearance-none pr-10', className)} {...rest}>
-            {children}
-          </select>
-          <svg className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-mist" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-        </div>
       </FieldWrap>
     );
   },

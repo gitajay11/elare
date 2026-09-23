@@ -22,7 +22,7 @@ export function AdminProducts() {
       <AdminHeader title="Products" description="Publish, price and stock every product and its shades." action={<Button to="/products/new" icon={<Plus size={16} />}>New product</Button>} />
       <div className="mb-4 flex flex-wrap gap-2">
         <input value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} placeholder="Search products…" className="h-10 w-64 rounded-full border border-line bg-white px-4 text-sm outline-none focus:border-rose" />
-        <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="h-10 rounded-full border border-line bg-white px-4 text-sm outline-none"><option value="">All</option><option value="published">Published</option><option value="draft">Draft</option><option value="low_stock">Low stock</option></select>
+        <Select variant="pill" aria-label="Filter products" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}><option value="">All products</option><option value="published">Published</option><option value="draft">Draft</option><option value="low_stock">Low stock</option></Select>
       </div>
       {isLoading || !data ? <Skeleton className="h-64" /> : (
         <>
@@ -168,7 +168,7 @@ export function AdminProductEditor() {
                     <input value={s.name} onChange={(e) => set({ name: e.target.value })} placeholder="Shade name (e.g. 01 Rose Nude)" className="h-10 min-w-0 rounded-xl border border-line px-3 text-sm" required />
                     <button type="button" onClick={() => { setShades((arr) => arr.filter((_, j) => j !== i)); setVariants((v) => v.map((x) => (x.shade_id === s.id ? { ...x, shade_id: null } : x))); }} className="grid h-9 w-9 place-items-center rounded-full text-mist hover:bg-danger/10 hover:text-danger sm:order-last" aria-label="Remove shade"><Trash2 size={15} /></button>
                     <input value={s.hex} onChange={(e) => set({ hex: e.target.value.toUpperCase() })} className={cn('col-span-3 h-10 min-w-0 rounded-xl border px-3 font-mono text-[13px] uppercase sm:col-span-1', valid ? 'border-line' : 'border-danger')} pattern="#[0-9a-fA-F]{6}" placeholder="#RRGGBB" aria-label="Hex colour" />
-                    <select value={s.undertone ?? ''} onChange={(e) => set({ undertone: e.target.value || null })} className="col-span-3 h-10 min-w-0 rounded-xl border border-line bg-white px-2 text-sm sm:col-span-1"><option value="">Undertone</option><option value="warm">Warm</option><option value="cool">Cool</option><option value="neutral">Neutral</option></select>
+                    <Select size="sm" aria-label="Undertone" className="col-span-3 min-w-0 sm:col-span-1" value={s.undertone ?? ''} onChange={(e) => set({ undertone: e.target.value || null })}><option value="">Undertone</option><option value="warm">Warm</option><option value="cool">Cool</option><option value="neutral">Neutral</option></Select>
                   </div>
                 );
               })}
@@ -204,13 +204,13 @@ export function AdminProductEditor() {
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                       <Field label="Variant name"><input value={v.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. 01 Rose Nude" required className={field} /></Field>
                       <Field label="SKU"><input value={v.sku} onChange={(e) => set({ sku: e.target.value.toUpperCase() })} placeholder="ELR-LIP-01" required className={cn(field, 'font-mono uppercase')} /></Field>
-                      <Field label="Shade"><select value={v.shade_id ?? ''} onChange={(e) => set({ shade_id: e.target.value || null })} className={cn(field, 'bg-white')}><option value="">No shade</option>{shades.map((sh) => <option key={sh.id} value={sh.id}>{sh.name || '(unnamed)'}</option>)}</select></Field>
+                      <Field label="Shade"><Select size="sm" aria-label="Shade" value={v.shade_id ?? ''} onChange={(e) => set({ shade_id: e.target.value || null })}><option value="">No shade</option>{shades.map((sh) => <option key={sh.id} value={sh.id} data-swatch={sh.hex}>{sh.name || '(unnamed)'}</option>)}</Select></Field>
                       <Field label="Price override (₹)" hint="Blank = product price"><input type="number" step="0.01" min={0} value={v.price_override ?? ''} onChange={(e) => set({ price_override: e.target.value ? Number(e.target.value) : null })} placeholder={String(product.price || '')} className={field} /></Field>
                       <Field label="Stock"><input type="number" min={0} value={v.quantity} onChange={(e) => set({ quantity: Number(e.target.value) })} className={field} /></Field>
                       <Field label="Low-stock alert at"><input type="number" min={0} value={v.low_stock_threshold} onChange={(e) => set({ low_stock_threshold: Number(e.target.value) })} className={field} /></Field>
                       <Field label="Finish"><input value={String(v.options.finish ?? '')} onChange={(e) => opt('finish', e.target.value)} placeholder="Satin, Matte…" className={field} /></Field>
                       <Field label="Coverage"><input value={String(v.options.coverage ?? '')} onChange={(e) => opt('coverage', e.target.value)} placeholder="Light, Medium, Full" className={field} /></Field>
-                      <Field label="Waterproof"><select value={v.options.waterproof === undefined ? '' : String(v.options.waterproof)} onChange={(e) => opt('waterproof', e.target.value)} className={cn(field, 'bg-white')}><option value="">Not specified</option><option value="true">Waterproof</option><option value="false">Non-waterproof</option></select></Field>
+                      <Field label="Waterproof"><Select size="sm" aria-label="Waterproof" value={v.options.waterproof === undefined ? '' : String(v.options.waterproof)} onChange={(e) => opt('waterproof', e.target.value)}><option value="">Not specified</option><option value="true">Waterproof</option><option value="false">Non-waterproof</option></Select></Field>
                       <Field label="Pack / size"><input value={String(v.options.pack ?? v.options.size ?? '')} onChange={(e) => opt('pack', e.target.value)} placeholder="3.5 g, Set of 3…" className={field} /></Field>
                     </div>
                   </div>
@@ -228,7 +228,7 @@ export function AdminProductEditor() {
                   <div className="grid min-w-0 gap-2 sm:contents">
                   <input value={img.url} onChange={(e) => setImages((arr) => arr.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))} placeholder="https://…" aria-label="Image URL" className="h-10 w-full min-w-0 rounded-xl border border-line px-3 text-sm" />
                   <input value={img.alt} onChange={(e) => setImages((arr) => arr.map((x, j) => (j === i ? { ...x, alt: e.target.value } : x)))} placeholder="Alt text" aria-label="Alt text" className="h-10 w-full min-w-0 rounded-xl border border-line px-3 text-sm" />
-                  <select value={img.shade_id ?? ''} onChange={(e) => setImages((arr) => arr.map((x, j) => (j === i ? { ...x, shade_id: e.target.value || null } : x)))} aria-label="Shade" className="h-10 w-full min-w-0 rounded-xl border border-line bg-white px-2 text-sm"><option value="">All shades</option>{shades.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+                  <Select size="sm" aria-label="Image shade" className="min-w-0" value={img.shade_id ?? ''} onChange={(e) => setImages((arr) => arr.map((x, j) => (j === i ? { ...x, shade_id: e.target.value || null } : x)))}><option value="">All shades</option>{shades.map((s) => <option key={s.id} value={s.id} data-swatch={s.hex}>{s.name}</option>)}</Select>
                   </div>
                   <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-1"><button type="button" aria-label="Move up" disabled={i === 0} onClick={() => setImages((arr) => { const c = [...arr]; [c[i - 1], c[i]] = [c[i], c[i - 1]]; return c; })} className="text-mist disabled:opacity-30">↑</button><button type="button" onClick={() => setImages((arr) => arr.filter((_, j) => j !== i))} className="text-mist hover:text-danger"><Trash2 size={15} /></button></div>
                 </div>
@@ -241,7 +241,7 @@ export function AdminProductEditor() {
             <p className="mb-3 text-[12.5px] text-mist">For combos such as the Lip Edit: the variants included in this product.</p>
             {bundle.map((b, i) => (
               <div key={i} className="mb-2 grid grid-cols-[minmax(0,1fr)_72px_auto] items-center gap-2">
-                <select value={b.variant_id} onChange={(e) => setBundle((arr) => arr.map((x, j) => (j === i ? { ...x, variant_id: e.target.value } : x)))} className="h-10 w-full min-w-0 rounded-xl border border-line bg-white px-2 text-sm"><option value="">Choose a variant</option>{variantOptions?.filter((o) => o.product_id !== id).map((o) => <option key={o.variant_id} value={o.variant_id}>{o.label} — {money(o.price)}</option>)}</select>
+                <Select size="sm" aria-label="Bundle variant" className="min-w-0" value={b.variant_id} onChange={(e) => setBundle((arr) => arr.map((x, j) => (j === i ? { ...x, variant_id: e.target.value } : x)))}><option value="">Choose a variant</option>{variantOptions?.filter((o) => o.product_id !== id).map((o) => <option key={o.variant_id} value={o.variant_id}>{o.label} — {money(o.price)}</option>)}</Select>
                 <input type="number" min={1} value={b.quantity} onChange={(e) => setBundle((arr) => arr.map((x, j) => (j === i ? { ...x, quantity: Number(e.target.value) } : x)))} className="h-10 rounded-xl border border-line px-3 text-sm" />
                 <button type="button" onClick={() => setBundle((arr) => arr.filter((_, j) => j !== i))} className="text-mist hover:text-danger"><Trash2 size={15} /></button>
               </div>
@@ -251,8 +251,8 @@ export function AdminProductEditor() {
           <Card title="Recommendations" action={<Button size="sm" variant="soft" icon={<Plus size={14} />} onClick={() => setRecs((r) => [...r, { product_id: '', kind: 'complete_look' }])}>Add</Button>}>
             {recs.map((r, i) => (
               <div key={i} className="mb-2 grid grid-cols-[minmax(0,1fr)_minmax(0,9rem)_auto] items-center gap-2">
-                <select value={r.product_id} onChange={(e) => setRecs((arr) => arr.map((x, j) => (j === i ? { ...x, product_id: e.target.value } : x)))} className="h-10 w-full min-w-0 rounded-xl border border-line bg-white px-2 text-sm"><option value="">Choose a product</option>{Array.from(new Map(variantOptions?.map((o) => [o.product_id, o.label.split(' · ')[0]])).entries()).filter(([pid]) => pid !== id).map(([pid, name]) => <option key={pid} value={pid}>{name}</option>)}</select>
-                <select value={r.kind} onChange={(e) => setRecs((arr) => arr.map((x, j) => (j === i ? { ...x, kind: e.target.value } : x)))} className="h-10 w-full min-w-0 rounded-xl border border-line bg-white px-2 text-sm"><option value="complete_look">Complete your look</option><option value="also_like">You may also like</option><option value="bundle">Natural bundle (home)</option></select>
+                <Select size="sm" aria-label="Recommended product" className="min-w-0" value={r.product_id} onChange={(e) => setRecs((arr) => arr.map((x, j) => (j === i ? { ...x, product_id: e.target.value } : x)))}><option value="">Choose a product</option>{Array.from(new Map(variantOptions?.map((o) => [o.product_id, o.label.split(' · ')[0]])).entries()).filter(([pid]) => pid !== id).map(([pid, name]) => <option key={pid} value={pid}>{name}</option>)}</Select>
+                <Select size="sm" aria-label="Recommendation type" className="min-w-0" value={r.kind} onChange={(e) => setRecs((arr) => arr.map((x, j) => (j === i ? { ...x, kind: e.target.value } : x)))}><option value="complete_look">Complete your look</option><option value="also_like">You may also like</option><option value="bundle">Natural bundle (home)</option></Select>
                 <button type="button" onClick={() => setRecs((arr) => arr.filter((_, j) => j !== i))} className="text-mist hover:text-danger"><Trash2 size={15} /></button>
               </div>
             ))}

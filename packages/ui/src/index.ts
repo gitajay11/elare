@@ -1,5 +1,6 @@
 export * from './components/Button';
 export * from './components/Field';
+export * from './components/Select';
 export * from './components/Primitives';
 export * from './components/Overlay';
 export * from './components/Toaster';

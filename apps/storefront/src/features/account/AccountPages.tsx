@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Sparkles, Tag, Star, MapPin } from 'lucide-react';
 import { api } from '@/lib/api';
 import { type Address } from '@elare/types';
-import { Seo, useAuth, Button, Input, Checkbox, Modal, Confirm, Badge, EmptyState, Skeleton, Stars } from '@elare/ui';
+import { Seo, useAuth, Button, Input, Checkbox, Modal, Confirm, Badge, EmptyState, Skeleton, Stars, Select } from '@elare/ui';
 import { money, formatDate, formatDateTime, imageUrl, cn, couponValueLabel } from '@elare/utils';
 import { toast } from '@/lib/ui-store';
 import { ProductGrid } from '@/features/products/ProductGrid';
@@ -156,7 +156,7 @@ export function Addresses() {
             <Input label="Address" required value={editing.line1 ?? ''} onChange={(e) => setEditing({ ...editing, line1: e.target.value })} wrapClassName="sm:col-span-2" />
             <Input label="Landmark / area" value={editing.line2 ?? ''} onChange={(e) => setEditing({ ...editing, line2: e.target.value })} wrapClassName="sm:col-span-2" />
             <Input label="City" required value={editing.city ?? ''} onChange={(e) => setEditing({ ...editing, city: e.target.value })} />
-            <div className="space-y-1.5"><label className="block text-[12px] font-semibold uppercase tracking-[0.12em] text-ink-soft">State</label><select required value={editing.state ?? ''} onChange={(e) => setEditing({ ...editing, state: e.target.value })} className="h-12 w-full rounded-xl border border-line bg-white px-4 outline-none focus:border-rose"><option value="">Select</option>{INDIAN_STATES.map((s) => <option key={s}>{s}</option>)}</select></div>
+            <Select label="State" required value={editing.state ?? ''} onChange={(e) => setEditing({ ...editing, state: e.target.value })} placeholder="Select state"><option value="">Select state</option>{INDIAN_STATES.map((s) => <option key={s}>{s}</option>)}</Select>
             <Checkbox label="Set as default" checked={!!editing.is_default} onChange={(e) => setEditing({ ...editing, is_default: e.target.checked })} className="sm:col-span-2" />
             <div className="flex justify-end gap-2 sm:col-span-2"><Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button><Button type="submit" loading={save.isPending}>Save address</Button></div>
           </form>

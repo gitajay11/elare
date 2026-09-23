@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Heart, Sparkles } from 'lucide-react';
 import { api } from '@/lib/api';
 import { type WishlistItem } from '@elare/types';
-import { Seo, Button, EmptyState, Price, Rating, Skeleton, Modal } from '@elare/ui';
+import { Seo, Button, EmptyState, Price, Rating, Skeleton, Modal, Select } from '@elare/ui';
 import { money } from '@elare/utils';
 import { toast } from '@/lib/ui-store';
 import { useWishlist } from '@/features/wishlist/store';
@@ -85,12 +85,9 @@ function RedeemModal({ item, onClose }: { item: WishlistItem | null; onClose: ()
         <div className="space-y-4 text-sm">
           <p>Use <b>{item.points_required.toLocaleString('en-IN')} points</b> to receive <b>{item.name}</b> ({money(item.price)}) with free delivery. Points are validated and deducted securely when you confirm.</p>
           {addresses?.length ? (
-            <div>
-              <label htmlFor="redeem-address" className="block text-[12px] font-semibold uppercase tracking-[0.12em] text-ink-soft">Deliver to</label>
-              <select id="redeem-address" value={chosen} onChange={(e) => setAddressId(e.target.value)} className="mt-2 h-11 w-full rounded-xl border border-line bg-white px-3 outline-none focus:border-rose">
-                {addresses.map((a) => <option key={a.id} value={a.id}>{a.full_name} — {a.line1}, {a.city} {a.postal_code}</option>)}
-              </select>
-            </div>
+            <Select id="redeem-address" label="Deliver to" value={chosen} onChange={(e) => setAddressId(e.target.value)}>
+              {addresses.map((a) => <option key={a.id} value={a.id}>{a.full_name} — {a.line1}, {a.city} {a.postal_code}</option>)}
+            </Select>
           ) : (
             <p className="rounded-xl bg-blush/40 p-3 text-rose-deep">Add a delivery address first. <Link to="/account/addresses" className="underline">Manage addresses</Link></p>
           )}

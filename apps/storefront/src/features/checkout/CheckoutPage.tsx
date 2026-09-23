@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Check, ChevronDown, ChevronLeft, CreditCard, Lock, MapPin, Truck, Wallet } from 'lucide-react';
 import { api } from '@/lib/api';
 import { type Address } from '@elare/types';
-import { Seo, useAuth, Button, Input, Checkbox, PageLoader } from '@elare/ui';
+import { Seo, useAuth, Button, Input, Checkbox, PageLoader, Select } from '@elare/ui';
 import { money, cn } from '@elare/utils';
 import { useCart, toInputs } from '@/features/cart/store';
 import { toast } from '@/lib/ui-store';
@@ -182,14 +182,10 @@ function CheckoutFlow({ userEmail, userName, userPhone }: { userEmail: string; u
                       <Input label="Address" autoComplete="address-line1" value={form.line1} onChange={(e) => setForm({ ...form, line1: e.target.value })} error={errors.line1} wrapClassName="sm:col-span-2" placeholder="Flat, building, street" />
                       <Input label="Landmark / area (optional)" autoComplete="address-line2" value={form.line2} onChange={(e) => setForm({ ...form, line2: e.target.value })} wrapClassName="sm:col-span-2" />
                       <Input label="City" autoComplete="address-level2" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} error={errors.city} />
-                      <div className="space-y-1.5">
-                        <label htmlFor="state" className="block text-[12px] font-semibold tracking-[0.12em] uppercase text-ink-soft">State</label>
-                        <select id="state" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className={cn('h-12 w-full rounded-xl border border-line bg-white px-4 text-[15px] outline-none focus:border-rose', errors.state && 'border-danger')}>
-                          <option value="">Select state</option>
-                          {INDIAN_STATES.map((s) => <option key={s}>{s}</option>)}
-                        </select>
-                        {errors.state && <p className="text-[13px] text-danger">{errors.state}</p>}
-                      </div>
+                      <Select id="state" label="State" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} error={errors.state} placeholder="Select state">
+                        <option value="">Select state</option>
+                        {INDIAN_STATES.map((s) => <option key={s}>{s}</option>)}
+                      </Select>
                       <Input label="PIN code" autoComplete="postal-code" inputMode="numeric" maxLength={6} value={form.postal_code} onChange={(e) => setForm({ ...form, postal_code: e.target.value.replace(/\D/g, '') })} error={errors.postal_code} />
                       <div className="flex items-end pb-3"><Checkbox label="Save this address for next time" checked={saveAddress} onChange={(e) => setSaveAddress(e.target.checked)} /></div>
                       <div className="sm:col-span-2"><Button type="submit" size="lg">Continue to delivery</Button></div>
