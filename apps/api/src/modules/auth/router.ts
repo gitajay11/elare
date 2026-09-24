@@ -5,6 +5,7 @@ import { addressSchema, profileUpdateSchema, z } from '@elare/validation';
 import { body, HttpError } from '../../lib/http';
 import { asCaller, call } from '../../lib/db';
 import { requireAuth, userOf, type Env } from '../../middleware';
+import { signupOtpRouter } from './signup-otp';
 
 const ensureSchema = z.object({ full_name: z.string().trim().max(80).optional(), phone: z.string().trim().max(20).optional() });
 const NIL = '00000000-0000-0000-0000-000000000000';
@@ -15,7 +16,12 @@ const NIL = '00000000-0000-0000-0000-000000000000';
  * handled by Neon Auth directly from the browser, never through this API.
  */
 export const authRouter = new Hono<Env>()
-  .use('*', requireAuth)
+  // Public: the customer isn't signed in while verifying their sign-up email.
+  .route('/signup', signupOtpRouter)
+  .use('/profile', requireAuth)
+  .use('/dashboard', requireAuth)
+  .use('/addresses', requireAuth)
+  .use('/addresses/*', requireAuth)
   // Idempotent: returns the profile, creating it on the first authenticated call after sign-up.
   .post('/profile', async (c) => {
     const p = await body(c, ensureSchema);

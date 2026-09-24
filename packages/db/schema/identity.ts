@@ -10,6 +10,7 @@ export const profiles = pgTable('profiles', {
   phone: text('phone'),
   avatarUrl: text('avatar_url'),
   role: userRole('role').notNull().default('customer'),
+  emailVerified: boolean('email_verified').notNull().default(false),
   status: accountStatus('status').notNull().default('active'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

@@ -66,7 +66,7 @@ export function Navbar() {
       <div className="hidden border-b border-line/70 bg-ink text-center text-[11.5px] tracking-[0.12em] text-white/85 sm:block">
         <p className="py-1.5">Complimentary shipping on orders above ₹{freeAbove.toLocaleString('en-IN')} · Earn Élaré points on every order</p>
       </div>
-      <div className="container-x flex h-[68px] items-center justify-between gap-4 lg:h-[76px]">
+      <div className="container-x flex h-[68px] items-center justify-between gap-4 max-[379px]:gap-1.5 max-[379px]:px-3.5 lg:h-[76px]">
         <div className="flex items-center gap-2 lg:hidden">
           <IconButton label="Open menu" onClick={() => setMenu(true)}><Menu size={22} /></IconButton>
         </div>
@@ -91,7 +91,7 @@ export function Navbar() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 max-[379px]:gap-0">
           <IconButton label="Search" onClick={() => setSearch(true)}><Search size={20} /></IconButton>
           <Link to={user ? '/account' : signInPath(location.pathname)} className="hidden h-10 w-10 place-items-center rounded-full transition-colors hover:bg-blush/70 lg:grid" aria-label={user ? 'Account' : 'Sign in'}>
             <User size={20} />

@@ -25,7 +25,7 @@ const env = Object.fromEntries(
 const PROJECT = 'old-glitter-35912907';
 const BRANCH = 'br-silent-truth-b37e34sx';
 const SLUG = 'api';
-const KEYS = ['ALLOWED_ORIGINS', 'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM', 'SUPPORT_EMAIL', 'STORE_URL'];
+const KEYS = ['ALLOWED_ORIGINS', 'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM', 'SUPPORT_EMAIL', 'STORE_URL', 'OTP_SECRET'];
 
 const apiKey = env.NEON_API_KEY || process.env.NEON_API_KEY;
 if (!apiKey) throw new Error('NEON_API_KEY is not set');

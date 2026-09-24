@@ -1,13 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Seo, useAuth, Button, Input, Tabs, PageLoader } from '@elare/ui';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Seo, useAuth, Button, Input, Tabs, PageLoader, EmailUnverifiedError } from '@elare/ui';
 import { toast } from '@/lib/ui-store';
 import { client } from '@/lib/neon';
 import { CREATE_ACCOUNT, SIGN_IN } from '@/lib/routes';
 import { Logo } from '@/components/layout/Navbar';
+import { EmailVerification } from './EmailVerification';
 
-type Mode = 'signin' | 'signup' | 'reset';
+type Mode = 'signin' | 'signup' | 'reset' | 'verify';
 
 /** /signin and /signup share this page; the tab switch changes the URL. */
 export default function Auth({ initialMode = 'signin' }: { initialMode?: 'signin' | 'signup' }) {
@@ -27,6 +28,8 @@ export default function Auth({ initialMode = 'signin' }: { initialMode?: 'signin
   const [message, setMessage] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The account awaiting its email code. Held in memory only, to sign in once verified.
+  const [pending, setPending] = useState<{ email: string; password: string } | null>(null);
 
   useEffect(() => { setError(null); if (mode !== 'signin') setNotice(null); }, [mode]);
   if (loading) return <PageLoader />;
@@ -38,18 +41,24 @@ export default function Auth({ initialMode = 'signin' }: { initialMode?: 'signin
     setError(null);
     try {
       if (mode === 'signin') {
-        await signIn(form.email, form.password);
-        navigate(next, { replace: true });
+        try {
+          await signIn(form.email, form.password);
+          navigate(next, { replace: true });
+        } catch (err) {
+          // Right password, but the email was never verified: finish that first.
+          if (!(err instanceof EmailUnverifiedError)) throw err;
+          setPending({ email: err.email || form.email.trim(), password: form.password });
+          setModeState('verify');
+        }
       } else if (mode === 'signup') {
         if (form.name.trim().length < 2) throw new Error('Please enter your name.');
         if (form.password.length < 8) throw new Error('Use at least 8 characters for your password.');
         const r = await signUp(form.email, form.password, form.name.trim(), form.phone.trim());
         if (r.needsConfirmation) setMessage('Check your inbox — we’ve sent a link to confirm your email.');
         else {
-          toast({ title: 'Welcome to Élaré', description: 'Your account is ready — sign in to continue.', variant: 'success' });
-          setForm((f) => ({ ...f, password: '' }));
-          setNotice('Your account is ready. Sign in with your email and password.');
-          setMode('signin');
+          // Account created (unverified): next, the 4-digit code sent to this address.
+          setPending({ email: form.email.trim().toLowerCase(), password: form.password });
+          setModeState('verify');
         }
       } else {
         await resetPassword(form.email);
@@ -62,13 +71,42 @@ export default function Auth({ initialMode = 'signin' }: { initialMode?: 'signin
     }
   };
 
+  const onVerified = async () => {
+    if (!pending) return;
+    try {
+      await signIn(pending.email, pending.password);
+      toast({ title: 'Welcome to Élaré', description: 'Your email is verified and you’re signed in.', variant: 'success' });
+      navigate(next, { replace: true });
+    } catch {
+      // Verified, but the automatic sign-in didn't go through: sign in by hand.
+      setForm((f) => ({ ...f, email: pending.email, password: '' }));
+      setNotice('Your email is verified. Sign in to continue.');
+      setMode('signin');
+    } finally {
+      setPending(null);
+    }
+  };
+
+  const leaveVerify = () => {
+    setPending(null);
+    setForm((f) => ({ ...f, password: '' }));
+    setMode('signup');
+  };
+
   return (
     <div className="container-x grid min-h-[80vh] items-center py-12">
-      <Seo title={mode === 'signup' ? 'Create account' : 'Sign in'} noindex />
+      <Seo title={mode === 'verify' ? 'Verify your email' : mode === 'signup' ? 'Create account' : 'Sign in'} noindex />
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="mx-auto w-full max-w-md rounded-[28px] border border-line bg-white p-7 shadow-soft sm:p-9">
         <div className="mb-6 flex justify-center"><Logo size="lg" /></div>
+        <AnimatePresence mode="wait" initial={false}>
+        {mode === 'verify' && pending ? (
+          <motion.div key="verify" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}>
+            <EmailVerification email={pending.email} onVerified={onVerified} onBack={leaveVerify} />
+          </motion.div>
+        ) : (
+        <motion.div key="form" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}>
         {!configured && <p className="mb-4 rounded-xl bg-danger/10 px-4 py-3 text-[13px] text-danger">Not configured yet — copy <code>.env.example</code> to <code>.env.local</code> and set <code>VITE_NEON_URL</code> and <code>VITE_API_URL</code>.</p>}
-        {mode !== 'reset' && (
+        {mode !== 'reset' && mode !== 'verify' && (
           <Tabs tabs={[{ value: 'signin', label: 'Sign in' }, { value: 'signup', label: 'Create account' }]} value={mode as 'signin' | 'signup'} onChange={(v) => setMode(v)} className="mb-6 justify-center" />
         )}
         {mode === 'reset' && <h1 className="mb-2 text-center text-3xl">Reset your password</h1>}
@@ -92,6 +130,9 @@ export default function Auth({ initialMode = 'signin' }: { initialMode?: 'signin
           {mode === 'reset' && <button type="button" onClick={() => { setMode('signin'); setMessage(null); }} className="underline-offset-4 hover:underline">Back to sign in</button>}
           {mode === 'signup' && <p>By creating an account you agree to our <Link to="/pages/terms" className="underline">terms</Link> and <Link to="/pages/privacy" className="underline">privacy policy</Link>.</p>}
         </div>
+        </motion.div>
+        )}
+        </AnimatePresence>
       </motion.div>
     </div>
   );

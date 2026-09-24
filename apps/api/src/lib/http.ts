@@ -45,6 +45,7 @@ export function fromDbError(err: unknown): HttpError {
   const e = ((err as { cause?: unknown }).cause ?? err) as { message?: string; code?: string };
   const msg = (e.message ?? 'Database error').replace(/^.*?error:\s*/i, '').replace(/\s*\(SQLSTATE.*\)$/, '');
   if (/^authentication required$/i.test(msg)) return new HttpError(401, 'Please sign in to continue.', 'unauthenticated');
+  if (/^email not verified$/i.test(msg)) return new HttpError(403, 'Please verify your email to continue.', 'email_unverified');
   if (/^forbidden$/i.test(msg) || e.code === '42501') return new HttpError(403, 'You do not have permission to do that.', 'forbidden');
   if (/not found$/i.test(msg)) return new HttpError(404, msg, 'not_found');
   if (e.code === '23505') return new HttpError(409, 'That already exists.', 'conflict');

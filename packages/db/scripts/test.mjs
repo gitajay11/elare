@@ -66,9 +66,9 @@ for (const d of ['migrations', 'seed']) for (const f of readdirSync(join(root, d
 // Users
 // ---------------------------------------------------------------------------
 console.log('\n# users & profiles');
-const admin = await one(`insert into neon_auth."user" (email, name) values ('admin@elare.test', 'Élaré Admin') returning id`);
-const cust = await one(`insert into neon_auth."user" (email, name) values ('priya@example.com', 'Priya Sharma') returning id`);
-const cust2 = await one(`insert into neon_auth."user" (email, name) values ('ananya@example.com', 'Ananya Rao') returning id`);
+const admin = await one(`insert into neon_auth."user" (email, name, "emailVerified") values ('admin@elare.test', 'Élaré Admin', true) returning id`);
+const cust = await one(`insert into neon_auth."user" (email, name, "emailVerified") values ('priya@example.com', 'Priya Sharma', true) returning id`);
+const cust2 = await one(`insert into neon_auth."user" (email, name, "emailVerified") values ('ananya@example.com', 'Ananya Rao', true) returning id`);
 // Profiles are created lazily on first authenticated call (ensure_profile / require_user).
 await as(admin.id); await rpc('ensure_profile');
 await as(cust.id); const priya = await rpc('ensure_profile', { p_phone: '9876543210' });
@@ -454,6 +454,65 @@ await db.exec(`set role anonymous`);
 await expectError(() => one(`select count(*)::int as c from orders`), 'denied', 'anonymous role has no access to orders');
 ok((await rpc('get_home')).signature.length === 5, 'anonymous role can load the home payload');
 await db.exec(`reset role`);
+
+// ---------------------------------------------------------------------------
+console.log('\n# email verification (sign-up code)');
+// A fresh sign-up: Neon Auth leaves emailVerified false.
+const fresh = await one(`insert into neon_auth."user" (email, name) values ('new.customer@example.com', 'New Customer') returning id`);
+await as(fresh.id);
+const freshProfile = await rpc('ensure_profile');
+ok(freshProfile.email_verified === false, 'new sign-up: profile is unverified', freshProfile);
+await expectError(() => rpc('sync_cart', { p_items: JSON.stringify([{ variant_id: lipstick.id, quantity: 1 }]), p_replace: true }), 'email not verified', 'unverified account is refused customer actions (cart)');
+await expectError(() => rpc('toggle_wishlist', { p_product_id: lipstick.product_id ?? lipstickProduct.id }), 'email not verified', 'unverified account is refused customer actions (wishlist)');
+await expectError(() => rpc('place_order', { p_items: JSON.stringify([{ variant_id: lipstick.id, quantity: 1 }]), p_address: JSON.stringify({ full_name: 'X Y', phone: '9876543210', line1: '1 Test Street', city: 'Chennai', state: 'Tamil Nadu', postal_code: '600001' }), p_payment_method: 'cod' }), 'email not verified', 'unverified account cannot place an order');
+// …and cannot mark itself verified through the Data API.
+await db.exec(`set role authenticated`);
+await expectError(() => db.query(`update profiles set email_verified = true where id = $1`, [fresh.id]), 'not allowed', 'customer cannot self-verify via the Data API');
+await expectError(() => db.query(`select email_otp_verify('new.customer@example.com', 'x', 5)`), 'denied', 'client cannot call email_otp_verify');
+await expectError(() => db.query(`select * from email_otps`), 'denied', 'client cannot read the code table');
+await db.exec(`reset role`);
+await as(null);
+
+// Issue → wrong codes → lock; re-issue → correct code → verified, one-time use.
+let r = await rpc('email_otp_issue', { p_email: 'New.Customer@example.com ', p_code_hash: 'h1', p_ttl_seconds: 600, p_cooldown_seconds: 30, p_max_per_hour: 5 });
+ok(r.status === 'sent', 'issue: code sent for an unverified account (email case/space-insensitive)', r);
+r = await rpc('email_otp_issue', { p_email: 'new.customer@example.com', p_code_hash: 'h2', p_ttl_seconds: 600, p_cooldown_seconds: 30, p_max_per_hour: 5 });
+ok(r.status === 'cooldown' && r.retry_after > 0 && r.retry_after <= 30, 'issue: resend blocked during cooldown', r);
+ok((await rpc('email_otp_issue', { p_email: 'nobody@example.com', p_code_hash: 'h', p_ttl_seconds: 600, p_cooldown_seconds: 30, p_max_per_hour: 5 })).status === 'not_applicable', 'issue: unknown email is not_applicable (API answers it like sent)');
+ok((await rpc('email_otp_issue', { p_email: 'priya@example.com', p_code_hash: 'h', p_ttl_seconds: 600, p_cooldown_seconds: 30, p_max_per_hour: 5 })).status === 'not_applicable', 'issue: already-verified account gets no code');
+r = await rpc('email_otp_verify', { p_email: 'new.customer@example.com', p_code_hash: 'wrong', p_max_attempts: 3 });
+ok(r.status === 'invalid' && r.attempts_left === 2, 'verify: wrong code counts an attempt', r);
+await rpc('email_otp_verify', { p_email: 'new.customer@example.com', p_code_hash: 'wrong', p_max_attempts: 3 });
+r = await rpc('email_otp_verify', { p_email: 'new.customer@example.com', p_code_hash: 'wrong', p_max_attempts: 3 });
+ok(r.status === 'locked', 'verify: code locks after the maximum attempts', r);
+r = await rpc('email_otp_verify', { p_email: 'new.customer@example.com', p_code_hash: 'h1', p_max_attempts: 3 });
+ok(r.status === 'locked', 'verify: even the right code is refused once locked', r);
+await db.query(`update email_otps set last_sent_at = now() - interval '1 minute' where email = 'new.customer@example.com'`);
+r = await rpc('email_otp_issue', { p_email: 'new.customer@example.com', p_code_hash: 'h3', p_ttl_seconds: 600, p_cooldown_seconds: 30, p_max_per_hour: 5 });
+ok(r.status === 'sent', 'issue: resend after cooldown', r);
+ok((await rpc('email_otp_verify', { p_email: 'new.customer@example.com', p_code_hash: 'h1', p_max_attempts: 3 })).status === 'invalid', 'verify: the previous code is invalidated by a resend');
+ok((await rpc('email_otp_verify', { p_email: 'new.customer@example.com', p_code_hash: 'h3', p_max_attempts: 3 })).status === 'verified', 'verify: correct code verifies');
+ok((await rpc('email_otp_verify', { p_email: 'new.customer@example.com', p_code_hash: 'h3', p_max_attempts: 3 })).status === 'invalid', 'verify: a code works only once');
+ok((await one(`select email_verified from profiles where id = $1`, [fresh.id])).email_verified === true, 'verify: profile marked verified');
+ok((await one(`select "emailVerified" as v from neon_auth."user" where id = $1`, [fresh.id])).v === true, 'verify: Neon Auth flag kept in step');
+await as(fresh.id);
+ok((await rpc('get_my_dashboard')) !== null, 'verified account can use customer actions');
+await as(null);
+
+// Expiry and the hourly cap.
+const late = await one(`insert into neon_auth."user" (email, name) values ('late@example.com', 'Late Comer') returning id`);
+await rpc('email_otp_issue', { p_email: 'late@example.com', p_code_hash: 'e1', p_ttl_seconds: 600, p_cooldown_seconds: 30, p_max_per_hour: 3 });
+await db.query(`update email_otps set expires_at = now() - interval '1 second' where email = 'late@example.com'`);
+ok((await rpc('email_otp_verify', { p_email: 'late@example.com', p_code_hash: 'e1', p_max_attempts: 5 })).status === 'expired', 'verify: expired code is refused');
+for (let i = 0; i < 2; i++) {
+  await db.query(`update email_otps set last_sent_at = now() - interval '1 minute' where email = 'late@example.com'`);
+  await rpc('email_otp_issue', { p_email: 'late@example.com', p_code_hash: `e${i + 2}`, p_ttl_seconds: 600, p_cooldown_seconds: 30, p_max_per_hour: 3 });
+}
+await db.query(`update email_otps set last_sent_at = now() - interval '1 minute' where email = 'late@example.com'`);
+r = await rpc('email_otp_issue', { p_email: 'late@example.com', p_code_hash: 'e9', p_ttl_seconds: 600, p_cooldown_seconds: 30, p_max_per_hour: 3 });
+ok(r.status === 'rate_limited' && r.retry_after > 0, 'issue: hourly send cap enforced', r);
+ok((await one(`select code_hash from email_otps where email = 'late@example.com'`)).code_hash === 'e3', 'table stores only the latest hash');
+void late;
 
 console.log(`\n${passed} passed, ${failed} failed`);
 await db.close();

@@ -1,6 +1,6 @@
 /** Error thrown by the API client; `status` is the HTTP status, `code` an optional machine code. */
 export class ApiError extends Error {
-  constructor(message: string, public status: number, public code?: string) {
+  constructor(message: string, public status: number, public code?: string, public details: Record<string, unknown> = {}) {
     super(message);
     this.name = 'ApiError';
   }
@@ -32,7 +32,7 @@ export function createApiClient({ baseUrl, getToken }: ApiClientOptions) {
     const data = text ? safeJson(text) : null;
     if (!res.ok) {
       const err = (data as { error?: string; code?: string } | null) ?? {};
-      throw new ApiError(err.error || `Request failed (${res.status})`, res.status, err.code);
+      throw new ApiError(err.error || `Request failed (${res.status})`, res.status, err.code, (data as Record<string, unknown>) ?? {});
     }
     return data as T;
   }

@@ -27,7 +27,7 @@ export default defineConfig({
         ...(process.env.RAZORPAY_KEY_SECRET ? { RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET } : {}),
         ...(process.env.RAZORPAY_WEBHOOK_SECRET ? { RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET } : {}),
         // Transactional email (order confirmations). Optional: without SMTP_HOST the API skips sending.
-        ...Object.fromEntries(['SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM', 'SUPPORT_EMAIL', 'STORE_URL']
+        ...Object.fromEntries(['SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM', 'SUPPORT_EMAIL', 'STORE_URL', 'OTP_SECRET']
           .filter((k) => process.env[k]).map((k) => [k, process.env[k]!])),
       },
     },

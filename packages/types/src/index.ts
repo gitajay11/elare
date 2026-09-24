@@ -271,6 +271,7 @@ export interface Profile {
   avatar_url: string | null;
   role: 'customer' | 'admin';
   status: 'active' | 'suspended';
+  email_verified: boolean;
 }
 
 export interface WishlistItem extends ProductCard {

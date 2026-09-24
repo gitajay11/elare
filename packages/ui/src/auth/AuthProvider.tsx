@@ -14,6 +14,21 @@ export interface AuthProfile {
   avatar_url: string | null;
   role: 'customer' | 'admin';
   status: 'active' | 'suspended';
+  /** False until the customer confirms the code emailed at sign-up. */
+  email_verified: boolean;
+}
+
+/**
+ * Thrown by signIn when the password is right but the email hasn't been
+ * verified yet. The session is ended; the sign-in page switches to the code
+ * screen for `email` and signs in again once it's verified.
+ */
+export class EmailUnverifiedError extends Error {
+  readonly code = 'email_unverified';
+  constructor(public email: string) {
+    super('Please verify your email to continue.');
+    this.name = 'EmailUnverifiedError';
+  }
 }
 
 /**
@@ -67,8 +82,9 @@ export function AuthProvider({ client, fetchProfile, resetRedirectTo, configured
   const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const profileFor = useRef<string | null>(null);
-  // While a sign-up is in flight the SDK emits SIGNED_IN then SIGNED_OUT; ignore both.
-  const signingUp = useRef(false);
+  // While a sign-up or a gated sign-in is in flight the SDK emits SIGNED_IN
+  // (and possibly SIGNED_OUT); ignore them until we know the account may use the app.
+  const quiet = useRef(false);
 
   const loadProfile = useCallback(async (u: AuthUser | null, extra?: { fullName?: string; phone?: string }) => {
     if (!u) {
@@ -83,7 +99,14 @@ export function AuthProvider({ client, fetchProfile, resetRedirectTo, configured
     let unauthorized = false;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        setProfile(await fetchProfile(extra));
+        const p = await fetchProfile(extra);
+        if (p.email_verified === false) {
+          // A session for an account that hasn't verified its email (e.g. the
+          // customer closed the tab at the code screen): don't let it in.
+          unauthorized = true;
+          break;
+        }
+        setProfile(p);
         return;
       } catch (e) {
         unauthorized = (e as { status?: number }).status === 401;
@@ -111,7 +134,7 @@ export function AuthProvider({ client, fetchProfile, resetRedirectTo, configured
       loadProfile(u).finally(() => mounted && setLoading(false));
     }).catch(() => mounted && setLoading(false));
     const { data: sub } = client.onAuthStateChange((_event, session) => {
-      if (signingUp.current) return;
+      if (quiet.current) return;
       const u = toUser(session?.user);
       setUser((prev) => (prev?.id === u?.id ? prev : u));
       loadProfile(u);
@@ -129,16 +152,39 @@ export function AuthProvider({ client, fetchProfile, resetRedirectTo, configured
     isAdmin: profile?.role === 'admin' && profile.status === 'active',
     configured,
     async signIn(email, password) {
-      const { data, error } = await client.signInWithPassword({ email, password });
-      if (error) throw new Error(friendly(error.message, 'Sign in failed'));
-      const u = toUser(data.user);
-      setUser(u);
-      await loadProfile(u);
+      quiet.current = true;
+      try {
+        const { data, error } = await client.signInWithPassword({ email, password });
+        if (error) throw new Error(friendly(error.message, 'Sign in failed'));
+        const u = toUser(data.user);
+        // Check the profile before exposing the session to the app.
+        let p: AuthProfile | null = null;
+        for (let attempt = 0; attempt < 3 && !p; attempt++) {
+          try {
+            p = await fetchProfile();
+          } catch {
+            await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+          }
+        }
+        if (p && p.email_verified === false) {
+          await client.signOut().catch(() => undefined);
+          throw new EmailUnverifiedError(u?.email || email);
+        }
+        setUser(u);
+        if (p && u) {
+          profileFor.current = u.id;
+          setProfile(p);
+        } else {
+          await loadProfile(u);
+        }
+      } finally {
+        quiet.current = false;
+      }
     },
     // Creates the account and its profile, then ends the session Neon Auth
     // opened so the customer signs in explicitly.
     async signUp(email, password, fullName, phone) {
-      signingUp.current = true;
+      quiet.current = true;
       try {
         const { data, error } = await client.signUp({ email, password, options: { data: { name: fullName } } });
         if (error) throw new Error(friendly(error.message, 'Sign up failed'));
@@ -155,7 +201,7 @@ export function AuthProvider({ client, fetchProfile, resetRedirectTo, configured
         profileFor.current = null;
         return { needsConfirmation: false };
       } finally {
-        signingUp.current = false;
+        quiet.current = false;
       }
     },
     async signOut() {

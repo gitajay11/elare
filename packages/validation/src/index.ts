@@ -9,6 +9,10 @@ const email = z.string().trim().toLowerCase().email('Enter a valid email');
 // ---------------------------------------------------------------------------
 // Auth / profile
 // ---------------------------------------------------------------------------
+/** Sign-up email verification: the client sends only the email (and the code to check). */
+export const signupOtpSendSchema = z.object({ email }).strict();
+export const signupOtpVerifySchema = z.object({ email, otp: z.string().regex(/^\d{4}$/, 'Enter the 4-digit code') }).strict();
+
 export const profileUpdateSchema = z.object({
   full_name: z.string().trim().min(2).max(80).optional(),
   phone: phone.optional(),

@@ -166,7 +166,7 @@ export function totals(o: OrderEmail): string {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${rows}</table>`;
 }
 
-export interface ShellProps { title: string; preheader: string; storeUrl: string; orderUrl: string; supportEmail: string; orderNumber: string; helpLine?: string }
+export interface ShellProps { title: string; preheader: string; storeUrl: string; orderUrl: string; supportEmail: string; orderNumber: string; helpLine?: string; reason?: string }
 
 /** Document chrome shared by every order email: head, wordmark, footer. `content` is the card rows. */
 export function shell(p: ShellProps, content: string): string {
@@ -225,7 +225,7 @@ ${content}
     <img src="${esc(p.storeUrl)}/logo-email.png" width="40" height="40" alt="Élaré" style="display:inline-block;width:40px;height:40px;border:0;" />
     <div style="font-family:${SERIF};font-size:18px;letter-spacing:0.22em;color:${C.ink};margin-top:6px;">ÉLARÉ</div>
     <div style="font-family:${SANS};font-size:11px;line-height:1.8;color:${C.mist};margin-top:4px;">Beauty, defined by you.<br><a class="link" href="${esc(p.storeUrl)}" style="color:${C.mist};text-decoration:none;">${esc(p.storeUrl.replace(/^https?:\/\//, ''))}</a> · <a class="link" href="${esc(p.storeUrl)}/pages/returns" style="color:${C.mist};text-decoration:none;">Returns</a> · <a class="link" href="${esc(p.storeUrl)}/pages/terms" style="color:${C.mist};text-decoration:none;">Terms</a></div>
-    <div style="font-family:${SANS};font-size:10.5px;color:${C.mist};margin-top:10px;">You're receiving this because you placed order ${esc(p.orderNumber)} at Élaré Beauty.</div>
+    <div style="font-family:${SANS};font-size:10.5px;color:${C.mist};margin-top:10px;">${p.reason ? esc(p.reason) : `You're receiving this because you placed order ${esc(p.orderNumber)} at Élaré Beauty.`}</div>
   </td></tr>
 
 </table>

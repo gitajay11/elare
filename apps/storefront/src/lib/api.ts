@@ -57,6 +57,9 @@ export const api = {
   subscribe: (email: string, source = 'footer') => http.post<{ status: 'subscribed' | 'already_subscribed' }>('/store/newsletter', { email, source }),
 
   // Account -----------------------------------------------------------------
+  // Sign-up email verification (public: the customer isn't signed in yet).
+  sendSignupOtp: (email: string) => http.post<{ sent: true; resend_in: number; expires_in: number }>('/auth/signup/send-email-otp', { email }),
+  verifySignupOtp: (email: string, otp: string) => http.post<{ verified: true }>('/auth/signup/verify-email-otp', { email, otp }),
   ensureProfile: (fullName?: string, phone?: string) => http.post<Profile>('/auth/profile', { full_name: fullName, phone }),
   updateProfile: (patch: { full_name?: string; phone?: string }) => http.patch<Profile>('/auth/profile', patch),
   dashboard: () => http.get<Dashboard>('/auth/dashboard'),

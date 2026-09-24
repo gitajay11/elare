@@ -7,8 +7,8 @@ import { cn } from '@elare/utils';
  * each site's public folder from logo/elare logo.png.
  */
 export function Logo({ className, light, href, size = 'md' }: { className?: string; light?: boolean; href?: string; size?: 'sm' | 'md' | 'lg' }) {
-  const mark = { sm: 'h-8 w-8', md: 'h-10 w-10', lg: 'h-14 w-14' }[size];
-  const word = { sm: 'text-[1.2rem]', md: 'text-[1.45rem]', lg: 'text-[1.9rem]' }[size];
+  const mark = { sm: 'h-8 w-8', md: 'h-10 w-10 max-[379px]:h-8 max-[379px]:w-8', lg: 'h-14 w-14' }[size];
+  const word = { sm: 'text-[1.2rem]', md: 'text-[1.45rem] max-[379px]:text-[1.2rem]', lg: 'text-[1.9rem]' }[size];
   const inner = (
     <>
       <img src="/logo.png" alt="" width={256} height={256} className={cn('shrink-0 select-none', mark)} draggable={false} />
@@ -18,6 +18,6 @@ export function Logo({ className, light, href, size = 'md' }: { className?: stri
       </span>
     </>
   );
-  const cls = cn('inline-flex items-center gap-2.5 font-display', className);
+  const cls = cn('inline-flex items-center gap-2.5 font-display max-[379px]:gap-2', className);
   return href ? <a href={href} className={cls} aria-label="Élaré Beauty — home">{inner}</a> : <Link to="/" className={cls} aria-label="Élaré Beauty — home">{inner}</Link>;
 }
