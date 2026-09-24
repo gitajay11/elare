@@ -3,9 +3,10 @@ import { ApiError } from '@elare/utils';
 import { api } from '@/lib/api';
 
 /**
- * Every rule of the sign-up code lives on the server; this hook only drives
- * the screen. It sends { email } to request a code and { email, otp } to
- * check one, and turns the answers into one of these states:
+ * Every rule of the email code lives on the server; this hook only drives the
+ * screen, for sign-up verification and for forgot password alike. It sends
+ * { email } to request a code and { email, otp } to check one, and turns the
+ * answers into one of these states:
  */
 export type OtpStatus =
   | 'sending'        // first code on its way
@@ -21,16 +22,50 @@ export type OtpStatus =
 
 export interface OtpMessage { tone: 'info' | 'error' | 'success'; text: string }
 
+export type OtpPurpose = 'signup' | 'reset';
+
+interface Flow {
+  send: (email: string) => Promise<{ resend_in: number }>;
+  resend: (email: string) => Promise<{ resend_in: number }>;
+  verify: (email: string, otp: string) => Promise<unknown>;
+  invalid: string;
+  expired: string;
+  locked: string;
+}
+
+const FLOWS: Record<OtpPurpose, Flow> = {
+  signup: {
+    send: api.sendSignupOtp, resend: api.sendSignupOtp, verify: api.verifySignupOtp,
+    invalid: 'That code doesn’t match. Please try again.',
+    expired: 'This code has expired. Request a new verification code.',
+    locked: 'Too many incorrect attempts. Request a new verification code.',
+  },
+  reset: {
+    send: api.forgotPassword, resend: api.resendForgotPasswordOtp, verify: api.verifyForgotPasswordOtp,
+    invalid: 'That verification code is incorrect. Please try again.',
+    expired: 'This verification code has expired. Please request a new code.',
+    locked: 'Too many incorrect attempts. Please request a new code.',
+  },
+};
+
 const LENGTH = 4;
 const prefersReducedMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const offline = (e: unknown) => !(e instanceof ApiError) || e.status === 0;
 const minutes = (s: number) => Math.max(1, Math.ceil(s / 60));
 
-export function useEmailOtp(email: string) {
-  const [status, setStatus] = useState<OtpStatus>('sending');
+/**
+ * `alreadySent`: the code went out before this screen opened (forgot password
+ * sends it from the email step) — seconds until a resend is allowed. The hook
+ * then skips its own first send.
+ */
+export function useEmailOtp(email: string, purpose: OtpPurpose = 'signup', alreadySent?: number) {
+  const flow = FLOWS[purpose];
+  const [status, setStatus] = useState<OtpStatus>(alreadySent === undefined ? 'sending' : 'idle');
   const [code, setCode] = useState('');
   const [message, setMessage] = useState<OtpMessage | null>(null);
-  const [resendIn, setResendIn] = useState(0);
+  const [resendIn, setResendIn] = useState(alreadySent ?? 0);
+  // What the server returned for the verified code (e.g. the reset grant). Memory only.
+  const [result, setResult] = useState<unknown>(null);
   const [errorKey, setErrorKey] = useState(0);
   const lastAction = useRef<'send' | 'verify'>('send');
   const busy = useRef(false);
@@ -50,7 +85,7 @@ export function useEmailOtp(email: string) {
     setStatus(kind === 'initial' ? 'sending' : 'resending');
     if (kind === 'resend') setMessage(null);
     try {
-      const r = await api.sendSignupOtp(email);
+      const r = await (kind === 'initial' ? flow.send : flow.resend)(email);
       setResendIn(r.resend_in);
       setCode('');
       setStatus('idle');
@@ -77,7 +112,7 @@ export function useEmailOtp(email: string) {
     } finally {
       busy.current = false;
     }
-  }, [email]);
+  }, [email, flow]);
 
   const verify = useCallback(async (value: string) => {
     if (busy.current || !/^\d{4}$/.test(value)) return;
@@ -90,8 +125,9 @@ export function useEmailOtp(email: string) {
     const begin = Date.now();
     const settle = () => new Promise((r) => setTimeout(r, Math.max(0, (prefersReducedMotion() ? 350 : 1050) - (Date.now() - begin))));
     try {
-      await api.verifySignupOtp(email, value);
+      const r = await flow.verify(email, value);
       await settle();
+      setResult(r);
       setStatus('success');
       setMessage(null);
     } catch (e) {
@@ -103,12 +139,12 @@ export function useEmailOtp(email: string) {
         setCode('');
         setStatus('expired');
         setResendIn(0);
-        setMessage({ tone: 'error', text: e.code === 'expired_otp' ? 'This code has expired. Request a new verification code.' : 'Too many incorrect attempts. Request a new verification code.' });
+        setMessage({ tone: 'error', text: e.code === 'expired_otp' ? flow.expired : flow.locked });
       } else if (e instanceof ApiError && e.code === 'invalid_otp') {
         const left = Number(e.details.attempts_left);
         setStatus('invalid');
         setErrorKey((k) => k + 1);
-        setMessage({ tone: 'error', text: `That code doesn’t match. Please try again.${left > 0 && left <= 2 ? ` ${left} ${left === 1 ? 'attempt' : 'attempts'} left.` : ''}` });
+        setMessage({ tone: 'error', text: `${flow.invalid}${left > 0 && left <= 2 ? ` ${left} ${left === 1 ? 'attempt' : 'attempts'} left.` : ''}` });
         // After the shake, clear the boxes for a fresh try.
         setTimeout(() => { setCode(''); setStatus((s) => (s === 'invalid' ? 'idle' : s)); }, 700);
       } else {
@@ -119,7 +155,7 @@ export function useEmailOtp(email: string) {
     } finally {
       busy.current = false;
     }
-  }, [email]);
+  }, [email, flow]);
 
   const onCodeChange = useCallback((v: string) => {
     setCode(v);
@@ -134,10 +170,11 @@ export function useEmailOtp(email: string) {
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    void send('initial');
+    if (alreadySent === undefined) void send('initial');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [send]);
 
-  return { status, code, message, resendIn, errorKey, length: LENGTH, onCodeChange, verify, resend: () => send('resend'), retry };
+  return { status, code, message, resendIn, errorKey, result, length: LENGTH, onCodeChange, verify, resend: () => send('resend'), retry };
 }
 
 /** u***@gmail.com */

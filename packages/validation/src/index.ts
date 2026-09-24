@@ -1,6 +1,7 @@
 // Zod schemas shared by the API (request validation) and the apps (forms).
 import { z } from 'zod';
 import { INDIAN_STATES, ORDER_STATUSES } from '@elare/config';
+import { PASSWORD_HINT, PASSWORD_MAX, PASSWORD_RULES } from '@elare/utils/password';
 
 const uuid = z.string().uuid();
 const phone = z.string().transform((s) => s.replace(/\D/g, '')).pipe(z.string().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit mobile number'));
@@ -12,6 +13,22 @@ const email = z.string().trim().toLowerCase().email('Enter a valid email');
 /** Sign-up email verification: the client sends only the email (and the code to check). */
 export const signupOtpSendSchema = z.object({ email }).strict();
 export const signupOtpVerifySchema = z.object({ email, otp: z.string().regex(/^\d{4}$/, 'Enter the 4-digit code') }).strict();
+
+/** Account passwords: the shared rules from @elare/utils, as a schema. */
+export const passwordSchema = z.string()
+  .min(1, 'Enter a new password.')
+  .max(PASSWORD_MAX, `Use at most ${PASSWORD_MAX} characters.`)
+  .refine((p) => PASSWORD_RULES.every((r) => r.test(p)), PASSWORD_HINT);
+
+/** Forgot password: { email } → code; { email, otp } → reset grant; grant + new password → changed. */
+export const forgotPasswordSchema = z.object({ email }).strict();
+export const forgotPasswordVerifySchema = signupOtpVerifySchema;
+export const resetPasswordSchema = z.object({
+  email,
+  reset_token: z.string().min(32).max(128),
+  password: passwordSchema,
+  confirm_password: z.string().min(1, 'Confirm your new password.'),
+}).strict().refine((v) => v.password === v.confirm_password, { message: 'Passwords do not match.', path: ['confirm_password'] });
 
 export const profileUpdateSchema = z.object({
   full_name: z.string().trim().min(2).max(80).optional(),

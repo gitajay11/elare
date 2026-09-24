@@ -60,6 +60,11 @@ export const api = {
   // Sign-up email verification (public: the customer isn't signed in yet).
   sendSignupOtp: (email: string) => http.post<{ sent: true; resend_in: number; expires_in: number }>('/auth/signup/send-email-otp', { email }),
   verifySignupOtp: (email: string, otp: string) => http.post<{ verified: true }>('/auth/signup/verify-email-otp', { email, otp }),
+  // Forgot password (public): code → reset grant (memory only) → new password.
+  forgotPassword: (email: string) => http.post<{ sent: true; resend_in: number; expires_in: number }>('/auth/forgot-password', { email }),
+  resendForgotPasswordOtp: (email: string) => http.post<{ sent: true; resend_in: number; expires_in: number }>('/auth/forgot-password/resend-otp', { email }),
+  verifyForgotPasswordOtp: (email: string, otp: string) => http.post<{ verified: true; reset_token: string; expires_in: number }>('/auth/forgot-password/verify-otp', { email, otp }),
+  resetPassword: (b: { email: string; reset_token: string; password: string; confirm_password: string }) => http.post<{ reset: true }>('/auth/reset-password', b),
   ensureProfile: (fullName?: string, phone?: string) => http.post<Profile>('/auth/profile', { full_name: fullName, phone }),
   updateProfile: (patch: { full_name?: string; phone?: string }) => http.patch<Profile>('/auth/profile', patch),
   dashboard: () => http.get<Dashboard>('/auth/dashboard'),

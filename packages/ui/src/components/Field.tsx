@@ -1,4 +1,4 @@
-import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from 'react';
+import { forwardRef, useId, useState, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from 'react';
 import { cn } from '@elare/utils';
 
 const control =
@@ -34,6 +34,35 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
     return (
       <FieldWrap label={label} hint={hint} error={error} id={id} className={wrapClassName}>
         <input ref={ref} id={id} className={cn(control, 'h-12', error && 'border-danger', className)} aria-invalid={!!error} {...rest} />
+      </FieldWrap>
+    );
+  },
+);
+
+/** Password field with a show/hide toggle; everything else as <Input>. */
+export const PasswordInput = forwardRef<HTMLInputElement, Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & { label?: ReactNode; hint?: ReactNode; error?: ReactNode; wrapClassName?: string }>(
+  function PasswordInput({ label, hint, error, className, wrapClassName, id: idProp, ...rest }, ref) {
+    const auto = useId();
+    const id = idProp ?? auto;
+    const [shown, setShown] = useState(false);
+    return (
+      <FieldWrap label={label} hint={hint} error={error} id={id} className={wrapClassName}>
+        <div className="relative">
+          <input ref={ref} id={id} type={shown ? 'text' : 'password'} className={cn(control, 'h-12 pr-12', error && 'border-danger', className)} aria-invalid={!!error} spellCheck={false} autoCapitalize="none" {...rest} />
+          <button
+            type="button"
+            onClick={() => setShown((s) => !s)}
+            aria-label={shown ? 'Hide password' : 'Show password'}
+            aria-controls={id}
+            className="absolute right-1.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-mist transition-colors hover:bg-blush/60 hover:text-rose-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink/60"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" />
+              <circle cx="12" cy="12" r="3" />
+              {shown && <path d="M4 4l16 16" />}
+            </svg>
+          </button>
+        </div>
       </FieldWrap>
     );
   },

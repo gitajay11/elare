@@ -41,6 +41,8 @@ const as = (uid) => db.query(`select set_config('app.uid', $1, false)`, [uid ?? 
 await db.exec(`
   create schema neon_auth;
   create table neon_auth."user" (id uuid primary key default gen_random_uuid(), name text, email text unique, "emailVerified" boolean default false, "createdAt" timestamptz default now());
+  create table neon_auth.session (id uuid primary key default gen_random_uuid(), "userId" uuid not null, "expiresAt" timestamptz default now() + interval '7 days');
+  create table neon_auth.verification (id uuid primary key default gen_random_uuid(), identifier text not null, value text not null, "expiresAt" timestamptz not null, "createdAt" timestamptz default now(), "updatedAt" timestamptz default now());
   create schema auth;
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('app.uid', true), '')::uuid $$;
   create function auth.user_id() returns text language sql stable as $$ select nullif(current_setting('app.uid', true), '') $$;
@@ -513,6 +515,75 @@ r = await rpc('email_otp_issue', { p_email: 'late@example.com', p_code_hash: 'e9
 ok(r.status === 'rate_limited' && r.retry_after > 0, 'issue: hourly send cap enforced', r);
 ok((await one(`select code_hash from email_otps where email = 'late@example.com'`)).code_hash === 'e3', 'table stores only the latest hash');
 void late;
+
+console.log('\n# forgot password (reset code → grant → Neon Auth token)');
+const issueReset = (email, hash) => rpc('email_otp_issue', { p_email: email, p_code_hash: hash, p_ttl_seconds: 600, p_cooldown_seconds: 30, p_max_per_hour: 5, p_purpose: 'reset' });
+const verifyReset = (email, hash, grant = 'g-hash') => rpc('email_otp_verify', { p_email: email, p_code_hash: hash, p_max_attempts: 5, p_purpose: 'reset', p_grant_hash: grant, p_grant_ttl_seconds: 600 });
+ok((await issueReset('nobody@example.com', 'x')).status === 'not_found', 'reset: unknown email is not_found');
+ok((await issueReset(' Priya@Example.com', 'r1')).status === 'sent', 'reset: verified account gets a code (email case/space-insensitive)');
+ok((await issueReset('priya@example.com', 'r2')).status === 'cooldown', 'reset: resend blocked during cooldown');
+ok((await rpc('email_otp_verify', { p_email: 'priya@example.com', p_code_hash: 'r1', p_max_attempts: 5 })).status === 'invalid', 'reset code cannot be used as a sign-up code');
+await expectError(() => rpc('email_otp_verify', { p_email: 'priya@example.com', p_code_hash: 'r1', p_max_attempts: 5, p_purpose: 'reset' }), 'reset grant required', 'reset verify refuses to run without a grant');
+r = await verifyReset('priya@example.com', 'wrong');
+ok(r.status === 'invalid' && r.attempts_left === 4, 'reset: wrong code counts an attempt', r);
+ok((await rpc('password_reset_claim', { p_email: 'priya@example.com', p_grant_hash: 'g-hash', p_auth_token: 't0' })).status === 'invalid', 'claim: no grant before the code is verified');
+await db.query(`update email_otps set last_sent_at = now() - interval '1 minute' where email = 'priya@example.com' and purpose = 'reset'`);
+ok((await issueReset('priya@example.com', 'r3')).status === 'sent', 'reset: resend after cooldown');
+ok((await verifyReset('priya@example.com', 'r1')).status === 'invalid', 'reset: previous code invalidated by resend');
+ok((await verifyReset('priya@example.com', 'r3')).status === 'verified', 'reset: correct code verifies');
+ok((await verifyReset('priya@example.com', 'r3', 'other')).status === 'invalid', 'reset: a code works only once');
+ok((await rpc('password_reset_claim', { p_email: 'priya@example.com', p_grant_hash: 'forged', p_auth_token: 't0' })).status === 'invalid', 'claim: a wrong grant is refused');
+ok((await rpc('password_reset_claim', { p_email: 'ananya@example.com', p_grant_hash: 'g-hash', p_auth_token: 't0' })).status === 'invalid', "claim: a grant only works for its own email");
+await db.query(`insert into neon_auth.session ("userId") values ($1), ($1)`, [cust.id]);
+ok((await rpc('password_reset_claim', { p_email: 'priya@example.com', p_grant_hash: 'g-hash', p_auth_token: 'tok-1' })).status === 'ok', 'claim: the verified grant is accepted');
+const tokenRow = await one(`select value, "expiresAt" > now() and "expiresAt" <= now() + interval '2 minutes' as short from neon_auth.verification where identifier = 'reset-password:tok-1'`);
+ok(tokenRow?.value === cust.id && tokenRow.short, 'claim: Neon Auth gets a one-time reset token for that user, valid ≤ 2 min', tokenRow);
+ok((await rpc('password_reset_claim', { p_email: 'priya@example.com', p_grant_hash: 'g-hash', p_auth_token: 'tok-2' })).status === 'busy', 'claim: a double submit is refused while one is in flight');
+await rpc('password_reset_release', { p_email: 'priya@example.com', p_grant_hash: 'g-hash' });
+ok((await one(`select count(*)::int n from neon_auth.verification where value = $1`, [cust.id])).n === 0, 'release: the unused Neon Auth token is withdrawn');
+ok((await rpc('password_reset_claim', { p_email: 'priya@example.com', p_grant_hash: 'g-hash', p_auth_token: 'tok-3' })).status === 'ok', 'release: the grant can be tried again');
+ok((await rpc('password_reset_finish', { p_email: 'priya@example.com', p_grant_hash: 'g-hash' })).status === 'ok', 'finish: grant spent');
+ok((await one(`select count(*)::int n from neon_auth.session where "userId" = $1`, [cust.id])).n === 0, 'finish: every existing session is signed out');
+ok((await rpc('password_reset_claim', { p_email: 'priya@example.com', p_grant_hash: 'g-hash', p_auth_token: 'tok-4' })).status === 'invalid', 'finish: a spent grant cannot be reused');
+// Expired grant; and a new code withdraws an unused grant.
+await db.query(`update email_otps set last_sent_at = now() - interval '1 minute' where email = 'priya@example.com' and purpose = 'reset'`);
+await issueReset('priya@example.com', 'r4');
+await verifyReset('priya@example.com', 'r4', 'g2');
+await db.query(`update email_otps set grant_expires_at = now() - interval '1 second' where email = 'priya@example.com' and purpose = 'reset'`);
+ok((await rpc('password_reset_claim', { p_email: 'priya@example.com', p_grant_hash: 'g2', p_auth_token: 'tok-5' })).status === 'expired', 'claim: an expired grant is refused');
+await db.query(`update email_otps set last_sent_at = now() - interval '1 minute' where email = 'priya@example.com' and purpose = 'reset'`);
+await issueReset('priya@example.com', 'r5');
+await verifyReset('priya@example.com', 'r5', 'g3');
+await db.query(`update email_otps set last_sent_at = now() - interval '1 minute' where email = 'priya@example.com' and purpose = 'reset'`);
+await issueReset('priya@example.com', 'r6');
+ok((await rpc('password_reset_claim', { p_email: 'priya@example.com', p_grant_hash: 'g3', p_auth_token: 'tok-6' })).status === 'invalid', 'a new code withdraws the grant of the old one');
+// Resetting also proves the inbox: an unverified sign-up becomes verified.
+const unv = await one(`insert into neon_auth."user" (email, name) values ('forgetful@example.com', 'Forgetful') returning id`);
+await as(unv.id); await rpc('ensure_profile'); await as(null);
+await issueReset('forgetful@example.com', 'f1');
+await verifyReset('forgetful@example.com', 'f1', 'gf');
+ok((await one(`select email_verified from profiles where id = $1`, [unv.id])).email_verified === true, 'reset code verifies an unverified sign-up too');
+await issueReset('new.customer@example.com', 'n1');
+ok((await q(`select purpose, code_hash from email_otps where email = 'new.customer@example.com' order by purpose`)).map((x) => `${x.purpose}:${x.code_hash}`).join() === 'reset:n1,signup:h3',
+   'sign-up and reset codes live side by side, one row per purpose');
+// Deleting a profile (e.g. in the Neon console) frees the email for a new sign-up.
+const gone = await one(`insert into neon_auth."user" (email, name, "emailVerified") values ('leaving@example.com', 'Leaving', true) returning id`);
+await as(gone.id); await rpc('ensure_profile'); await as(null);
+await db.query(`insert into neon_auth.session ("userId") values ($1)`, [gone.id]);
+await issueReset('leaving@example.com', 'l1');
+await db.query(`delete from profiles where id = $1`, [gone.id]);
+ok((await one(`select count(*)::int n from neon_auth."user" where email = 'leaving@example.com'`)).n === 0, 'deleting a profile deletes its Neon Auth sign-in');
+ok((await one(`select count(*)::int n from email_otps where email = 'leaving@example.com'`)).n === 0, 'deleting a profile clears its pending codes');
+ok((await one(`select count(*)::int n from wishlists where user_id = $1`, [gone.id])).n === 0, 'deleting a profile still cascades the store data');
+const back = await one(`insert into neon_auth."user" (email, name) values ('leaving@example.com', 'Back Again') returning id`);
+ok(back?.id && back.id !== gone.id, 'the same email can sign up again');
+ok((await one(`select count(*)::int n from neon_auth."user" where id = $1`, [cust2.id])).n === 1, 'other accounts are untouched');
+
+await db.exec(`set role authenticated`);
+await expectError(() => db.query(`select password_reset_claim('priya@example.com', 'g', 't')`), 'denied', 'client cannot call password_reset_claim');
+await expectError(() => db.query(`select password_reset_finish('priya@example.com', 'g')`), 'denied', 'client cannot call password_reset_finish');
+await expectError(() => db.query(`select email_otp_issue('priya@example.com', 'h', 600, 30, 5, 'reset')`), 'denied', 'client cannot issue reset codes');
+await db.exec(`reset role`);
 
 console.log(`\n${passed} passed, ${failed} failed`);
 await db.close();

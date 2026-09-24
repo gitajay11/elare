@@ -5,7 +5,7 @@ import { env } from '../lib/env';
 import { mailEnabled, sendMail } from '../lib/mail';
 import { renderHtml, renderText, subjectFor, type OrderEmail } from './order-confirmation';
 import { hasStatusEmail, renderStatusHtml, renderStatusText, statusSubject } from './order-status';
-import { renderVerificationHtml, renderVerificationText, verificationSubject } from './verification-code';
+import { renderVerificationHtml, renderVerificationText, verificationSubject, type CodePurpose } from './verification-code';
 
 const storeUrl = () => (env('STORE_URL') || 'https://www.elarebeauty.store').replace(/\/$/, '');
 const supportEmail = () => env('SUPPORT_EMAIL') || env('SMTP_USER') || 'hello@elarebeauty.store';
@@ -99,15 +99,15 @@ async function statusUpdate(orderId: string, status: string, note?: string | nul
   }
 }
 
-/** Emails a sign-up verification code. Resolves false when it could not be sent. */
-export async function sendVerificationCode(email: string, code: string, minutes: number): Promise<boolean> {
+/** Emails a sign-up or password-reset code. Resolves false when it could not be sent. */
+export async function sendVerificationCode(email: string, code: string, minutes: number, purpose: CodePurpose = 'signup'): Promise<boolean> {
   if (!mailEnabled()) {
     console.warn('[mail] SMTP not configured — verification code not sent');
     return false;
   }
-  const v = { code, minutes, storeUrl: storeUrl(), supportEmail: supportEmail() };
+  const v = { code, minutes, purpose, storeUrl: storeUrl(), supportEmail: supportEmail() };
   let sent = false;
-  await settle('verification code', sendMail({ to: email, subject: verificationSubject, html: renderVerificationHtml(v), text: renderVerificationText(v) }).then((ok) => { sent = ok; }));
+  await settle('verification code', sendMail({ to: email, subject: verificationSubject(purpose), html: renderVerificationHtml(v), text: renderVerificationText(v) }).then((ok) => { sent = ok; }));
   return sent;
 }
 

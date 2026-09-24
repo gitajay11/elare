@@ -2,18 +2,20 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Seo, useAuth, Button, Input, Tabs, PageLoader, EmailUnverifiedError } from '@elare/ui';
+import { passwordProblem } from '@elare/utils';
 import { toast } from '@/lib/ui-store';
 import { client } from '@/lib/neon';
 import { CREATE_ACCOUNT, SIGN_IN } from '@/lib/routes';
 import { Logo } from '@/components/layout/Navbar';
 import { EmailVerification } from './EmailVerification';
+import { ForgotPassword } from './ForgotPassword';
 
 type Mode = 'signin' | 'signup' | 'reset' | 'verify';
 
 /** /signin and /signup share this page; the tab switch changes the URL. */
 export default function Auth({ initialMode = 'signin' }: { initialMode?: 'signin' | 'signup' }) {
   const [sp] = useSearchParams();
-  const { user, loading, signIn, signUp, resetPassword, configured } = useAuth();
+  const { user, loading, signIn, signUp, configured } = useAuth();
   const navigate = useNavigate();
   const next = sp.get('next') || '/';
   const [mode, setModeState] = useState<Mode>(initialMode);
@@ -52,7 +54,8 @@ export default function Auth({ initialMode = 'signin' }: { initialMode?: 'signin
         }
       } else if (mode === 'signup') {
         if (form.name.trim().length < 2) throw new Error('Please enter your name.');
-        if (form.password.length < 8) throw new Error('Use at least 8 characters for your password.');
+        const weak = passwordProblem(form.password);
+        if (weak) throw new Error(weak);
         const r = await signUp(form.email, form.password, form.name.trim(), form.phone.trim());
         if (r.needsConfirmation) setMessage('Check your inbox — we’ve sent a link to confirm your email.');
         else {
@@ -60,9 +63,6 @@ export default function Auth({ initialMode = 'signin' }: { initialMode?: 'signin
           setPending({ email: form.email.trim().toLowerCase(), password: form.password });
           setModeState('verify');
         }
-      } else {
-        await resetPassword(form.email);
-        setMessage('If that email is registered, a reset link is on its way.');
       }
     } catch (err) {
       setError((err as Error).message);
@@ -95,21 +95,30 @@ export default function Auth({ initialMode = 'signin' }: { initialMode?: 'signin
 
   return (
     <div className="container-x grid min-h-[80vh] items-center py-12">
-      <Seo title={mode === 'verify' ? 'Verify your email' : mode === 'signup' ? 'Create account' : 'Sign in'} noindex />
+      <Seo title={mode === 'verify' ? 'Verify your email' : mode === 'reset' ? 'Forgot password' : mode === 'signup' ? 'Create account' : 'Sign in'} noindex />
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="mx-auto w-full max-w-md rounded-[28px] border border-line bg-white p-7 shadow-soft sm:p-9">
         <div className="mb-6 flex justify-center"><Logo size="lg" /></div>
         <AnimatePresence mode="wait" initial={false}>
-        {mode === 'verify' && pending ? (
+        {mode === 'reset' ? (
+          <motion.div key="reset" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}>
+            <ForgotPassword
+              initialEmail={form.email}
+              onBack={(email) => { setForm((f) => ({ ...f, email, password: '' })); setMode('signin'); }}
+              onDone={(email) => {
+                setForm((f) => ({ ...f, email, password: '' }));
+                setMode('signin');
+                setNotice('Your password has been changed. Sign in with your new password.');
+              }}
+            />
+          </motion.div>
+        ) : mode === 'verify' && pending ? (
           <motion.div key="verify" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}>
             <EmailVerification email={pending.email} onVerified={onVerified} onBack={leaveVerify} />
           </motion.div>
         ) : (
         <motion.div key="form" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}>
         {!configured && <p className="mb-4 rounded-xl bg-danger/10 px-4 py-3 text-[13px] text-danger">Not configured yet — copy <code>.env.example</code> to <code>.env.local</code> and set <code>VITE_NEON_URL</code> and <code>VITE_API_URL</code>.</p>}
-        {mode !== 'reset' && mode !== 'verify' && (
-          <Tabs tabs={[{ value: 'signin', label: 'Sign in' }, { value: 'signup', label: 'Create account' }]} value={mode as 'signin' | 'signup'} onChange={(v) => setMode(v)} className="mb-6 justify-center" />
-        )}
-        {mode === 'reset' && <h1 className="mb-2 text-center text-3xl">Reset your password</h1>}
+        <Tabs tabs={[{ value: 'signin', label: 'Sign in' }, { value: 'signup', label: 'Create account' }]} value={mode as 'signin' | 'signup'} onChange={(v) => setMode(v)} className="mb-6 justify-center" />
         {message ? (
           <div className="rounded-xl bg-blush/50 px-4 py-4 text-center text-sm">{message}</div>
         ) : (
@@ -118,16 +127,21 @@ export default function Auth({ initialMode = 'signin' }: { initialMode?: 'signin
             {mode === 'signup' && <Input label="Full name" autoComplete="name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />}
             <Input label="Email" type="email" autoComplete="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             {mode === 'signup' && <Input label="Mobile (optional)" autoComplete="tel" inputMode="numeric" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />}
-            {mode !== 'reset' && <Input label="Password" type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} required minLength={mode === 'signup' ? 8 : undefined} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} hint={mode === 'signup' ? 'At least 8 characters.' : undefined} />}
+            <Input label="Password" type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} required minLength={mode === 'signup' ? 8 : undefined} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} hint={mode === 'signup' ? 'At least 8 characters, with a letter and a number.' : undefined} />
+            {mode === 'signin' && (
+              <div className="-mt-1 flex justify-end">
+                <button type="button" onClick={() => setMode('reset')} className="rounded text-[13px] font-medium text-rose underline-offset-4 transition-colors hover:text-rose-deep hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink/60">
+                  Forgot Password?
+                </button>
+              </div>
+            )}
             {error && <p className="rounded-xl bg-danger/10 px-4 py-3 text-[13px] text-danger" role="alert">{error}</p>}
             <Button type="submit" variant="glow" size="lg" full loading={busy}>
-              {mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Create my account' : 'Send reset link'}
+              {mode === 'signin' ? 'Sign in' : 'Create my account'}
             </Button>
           </form>
         )}
         <div className="mt-5 text-center text-[13px] text-ink-soft">
-          {mode === 'signin' && <button type="button" onClick={() => setMode('reset')} className="underline-offset-4 hover:underline">Forgot your password?</button>}
-          {mode === 'reset' && <button type="button" onClick={() => { setMode('signin'); setMessage(null); }} className="underline-offset-4 hover:underline">Back to sign in</button>}
           {mode === 'signup' && <p>By creating an account you agree to our <Link to="/pages/terms" className="underline">terms</Link> and <Link to="/pages/privacy" className="underline">privacy policy</Link>.</p>}
         </div>
         </motion.div>

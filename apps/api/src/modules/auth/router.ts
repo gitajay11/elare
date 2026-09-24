@@ -6,18 +6,23 @@ import { body, HttpError } from '../../lib/http';
 import { asCaller, call } from '../../lib/db';
 import { requireAuth, userOf, type Env } from '../../middleware';
 import { signupOtpRouter } from './signup-otp';
+import { passwordResetRouter } from './password-reset';
 
 const ensureSchema = z.object({ full_name: z.string().trim().max(80).optional(), phone: z.string().trim().max(20).optional() });
 const NIL = '00000000-0000-0000-0000-000000000000';
 
 /**
  * Account: the caller's profile (created lazily from the Neon Auth user on
- * first call), their dashboard and saved addresses. Passwords and sessions are
- * handled by Neon Auth directly from the browser, never through this API.
+ * first call), their dashboard and saved addresses. Sign-in, sign-up and
+ * sessions are handled by Neon Auth directly from the browser; the only
+ * password step here is the code-verified reset (./password-reset), which
+ * still has Neon Auth set the new password.
  */
 export const authRouter = new Hono<Env>()
   // Public: the customer isn't signed in while verifying their sign-up email.
   .route('/signup', signupOtpRouter)
+  // Public: forgot password (code → reset grant → new password).
+  .route('/', passwordResetRouter)
   .use('/profile', requireAuth)
   .use('/dashboard', requireAuth)
   .use('/addresses', requireAuth)

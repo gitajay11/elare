@@ -287,21 +287,47 @@ export function OtpCode({
                   />
                 </svg>
               )}
-              {visual === 'success' && (
-                <svg width={tileSize * 0.52} height={tileSize * 0.52} viewBox="0 0 40 40" aria-hidden="true">
-                  <motion.path
-                    d="M11 20.5 L17.5 27 L29.5 14"
-                    fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ delay: 0.15, duration: reduce ? 0.01 : 0.45, ease: EASE }}
-                  />
-                </svg>
-              )}
+              {visual === 'success' && <CheckGlyph size={tileSize * 0.52} reduce={!!reduce} />}
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+/** The white check drawn on the success tile. */
+function CheckGlyph({ size, reduce, delay = 0.15 }: { size: number; reduce: boolean; delay?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true">
+      <motion.path
+        d="M11 20.5 L17.5 27 L29.5 14"
+        fill="none" stroke="#FFFFFF" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"
+        initial={{ pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ delay, duration: reduce ? 0.01 : 0.45, ease: EASE }}
+      />
+    </svg>
+  );
+}
+
+/**
+ * The verified tile on its own — the same green tile and drawn check that end
+ * the code animation, for success screens that follow it (e.g. "Password
+ * updated"). Decorative: pair it with a text status.
+ */
+export function SuccessMark({ size = 78, className }: { size?: number; className?: string }) {
+  const reduce = useReducedMotion();
+  return (
+    <motion.div
+      aria-hidden="true"
+      className={cn('mx-auto grid place-items-center rounded-[22px] border', className)}
+      style={{ width: size, height: size, backgroundColor: SUCCESS, borderColor: SUCCESS, boxShadow: '0 14px 30px -16px rgba(95,159,114,0.7)' }}
+      initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.6 }}
+      animate={reduce ? { opacity: 1 } : { opacity: 1, scale: [0.6, 1.06, 1] }}
+      transition={{ duration: reduce ? 0.2 : 0.5, ease: EASE }}
+    >
+      <CheckGlyph size={size * 0.52} reduce={!!reduce} delay={reduce ? 0 : 0.25} />
+    </motion.div>
   );
 }
