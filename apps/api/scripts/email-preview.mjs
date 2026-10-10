@@ -12,9 +12,11 @@ import { build } from 'esbuild';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const out = join(root, 'dist-functions', 'email-template.mjs');
 mkdirSync(dirname(out), { recursive: true });
-writeFileSync(join(root, 'dist-functions', 'email-entry.mjs'), `export * from '../src/emails/order-confirmation'; export * as status from '../src/emails/order-status';`);
+writeFileSync(join(root, 'dist-functions', 'email-entry.mjs'), `export * from '../src/emails/order-confirmation'; export * as status from '../src/emails/order-status'; export * as verification from '../src/emails/verification-code'; export { LOGO_PNG_BASE64 } from '../src/emails/logo';`);
 await build({ entryPoints: [join(root, 'dist-functions', 'email-entry.mjs')], bundle: true, platform: 'node', format: 'esm', outfile: out, logLevel: 'error' });
-const { renderHtml, renderText, subjectFor, status } = await import(pathToFileURL(out).href);
+const { renderHtml, renderText, subjectFor, status, verification, LOGO_CID, LOGO_PNG_BASE64 } = await import(pathToFileURL(out).href);
+// Real emails carry the logo as an inline attachment (cid:); a browser needs it inline.
+const page = (html) => html.split(`cid:${LOGO_CID}`).join(`data:image/png;base64,${LOGO_PNG_BASE64}`);
 
 const sample = {
   orderNumber: 'EB-10042',
@@ -38,11 +40,14 @@ const sample = {
 };
 
 const html = renderHtml(sample);
-writeFileSync(join(root, 'dist-functions', 'email-preview.html'), html);
+writeFileSync(join(root, 'dist-functions', 'email-preview.html'), page(html));
 writeFileSync(join(root, 'dist-functions', 'email-preview.txt'), renderText(sample));
 console.log(`Subject: ${subjectFor(sample)}`);
 for (const st of Object.keys(status.STATUS_COPY)) {
-  writeFileSync(join(root, 'dist-functions', `email-status-${st}.html`), status.renderStatusHtml({ ...sample, status: st }, st, st === 'packed' ? 'We added a sample of the new Velvet Balm — enjoy!' : null));
+  writeFileSync(join(root, 'dist-functions', `email-status-${st}.html`), page(status.renderStatusHtml({ ...sample, status: st }, st, st === 'packed' ? 'We added a sample of the new Velvet Balm — enjoy!' : null)));
+}
+for (const purpose of ['signup', 'reset']) {
+  writeFileSync(join(root, 'dist-functions', `email-code-${purpose}.html`), page(verification.renderVerificationHtml({ code: '4827', minutes: 10, purpose, storeUrl: sample.storeUrl, supportEmail: sample.supportEmail })));
 }
 console.log(`status previews: ${Object.keys(status.STATUS_COPY).join(', ')}`);
 console.log(`wrote ${join(root, 'dist-functions', 'email-preview.html')} (${(html.length / 1024).toFixed(0)} KB)`);

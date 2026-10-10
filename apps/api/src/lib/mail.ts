@@ -41,6 +41,8 @@ export interface Mail {
   html: string;
   text: string;
   replyTo?: string;
+  /** Images referenced from the HTML as cid:<cid>. */
+  inline?: { cid: string; filename: string; contentBase64: string; contentType: string }[];
 }
 
 /** Sends one message; returns false (and logs) instead of throwing. */
@@ -58,6 +60,7 @@ export async function sendMail(mail: Mail): Promise<boolean> {
       html: mail.html,
       text: mail.text,
       replyTo: mail.replyTo ?? env('SUPPORT_EMAIL') ?? undefined,
+      attachments: mail.inline?.map((a) => ({ cid: a.cid, filename: a.filename, content: a.contentBase64, encoding: 'base64', contentType: a.contentType, contentDisposition: 'inline' as const })),
     });
     console.log(`[mail] sent "${mail.subject}" to ${mail.to} (${info.messageId})`);
     return true;

@@ -8,6 +8,12 @@
  * Mail / iOS, tappable product rows, bulletproof buttons and deep links back
  * into the account area.
  */
+/**
+ * Content-ID of the Élaré emblem. Every email carries the logo as an inline
+ * attachment (see emails/index.ts), so it shows even when the website is down.
+ */
+export const LOGO_CID = 'elare-logo@elarebeauty';
+
 export interface OrderEmailItem {
   name: string;
   variant: string | null;
@@ -79,7 +85,7 @@ function preheader(o: OrderEmail): string {
 export function wordmark(storeUrl: string): string {
   return `<a href="${esc(storeUrl)}" style="text-decoration:none;display:inline-block;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-        <td valign="middle" style="padding-right:12px;"><img src="${esc(storeUrl)}/logo-email.png" width="56" height="56" alt="Élaré" style="display:block;width:56px;height:56px;border:0;" /></td>
+        <td valign="middle" style="padding-right:12px;"><img src="cid:${LOGO_CID}" width="56" height="56" alt="Élaré" style="display:block;width:56px;height:56px;border:0;" /></td>
         <td valign="middle" style="text-align:left;">
           <span style="font-family:${SERIF};font-size:28px;font-weight:600;letter-spacing:0.2em;color:${C.ink};line-height:1;display:block;">ÉLARÉ</span>
           <span style="font-family:${SANS};font-size:9.5px;letter-spacing:0.36em;color:${C.rose};text-transform:uppercase;display:block;margin-top:4px;">Beauty</span>
@@ -222,7 +228,7 @@ ${content}
     Questions — reply to this email or write to <a class="link" href="mailto:${esc(p.supportEmail)}" style="color:${C.rose};font-weight:600;text-decoration:none;">${esc(p.supportEmail)}</a>.
   </td></tr>
   <tr><td align="center" style="padding:28px 24px 0;">
-    <img src="${esc(p.storeUrl)}/logo-email.png" width="40" height="40" alt="Élaré" style="display:inline-block;width:40px;height:40px;border:0;" />
+    <img src="cid:${LOGO_CID}" width="40" height="40" alt="Élaré" style="display:inline-block;width:40px;height:40px;border:0;" />
     <div style="font-family:${SERIF};font-size:18px;letter-spacing:0.22em;color:${C.ink};margin-top:6px;">ÉLARÉ</div>
     <div style="font-family:${SANS};font-size:11px;line-height:1.8;color:${C.mist};margin-top:4px;">Beauty, defined by you.<br><a class="link" href="${esc(p.storeUrl)}" style="color:${C.mist};text-decoration:none;">${esc(p.storeUrl.replace(/^https?:\/\//, ''))}</a> · <a class="link" href="${esc(p.storeUrl)}/pages/returns" style="color:${C.mist};text-decoration:none;">Returns</a> · <a class="link" href="${esc(p.storeUrl)}/pages/terms" style="color:${C.mist};text-decoration:none;">Terms</a></div>
     <div style="font-family:${SANS};font-size:10.5px;color:${C.mist};margin-top:10px;">${p.reason ? esc(p.reason) : `You're receiving this because you placed order ${esc(p.orderNumber)} at Élaré Beauty.`}</div>
@@ -250,7 +256,7 @@ export function renderHtml(o: OrderEmail): string {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr><td style="height:6px;background:linear-gradient(90deg,${C.blush},${C.rose},${C.champagne});font-size:0;line-height:0;">&nbsp;</td></tr>
       <tr><td class="pad" align="center" style="padding:40px 44px 8px;">
-        <img src="${esc(o.storeUrl)}/logo-email.png" width="72" height="72" alt="Élaré" style="display:inline-block;width:72px;height:72px;border:0;" />
+        <img src="cid:${LOGO_CID}" width="72" height="72" alt="Élaré" style="display:inline-block;width:72px;height:72px;border:0;" />
         <div style="font-family:${SANS};font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:${C.rose};font-weight:700;margin-top:22px;">Order ${esc(o.orderNumber)}</div>
         <h1 class="h1" style="font-family:${SERIF};font-size:40px;line-height:1.08;font-weight:500;color:${C.ink};margin:12px 0 0;letter-spacing:-0.01em;">Thank you, ${esc(firstName(o.customerName))}.</h1>
         <p style="font-family:${SANS};font-size:15px;line-height:1.6;color:${C.inkSoft};margin:14px 0 0;max-width:420px;">${heading} We're preparing it with care and will email you at every step — packed, shipped, delivered.</p>

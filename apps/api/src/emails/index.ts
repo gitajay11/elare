@@ -2,10 +2,15 @@ import { eq } from 'drizzle-orm';
 import { orders, orderItems, products, profiles } from '@elare/db';
 import { asOwner } from '../lib/db';
 import { env } from '../lib/env';
-import { mailEnabled, sendMail } from '../lib/mail';
-import { renderHtml, renderText, subjectFor, type OrderEmail } from './order-confirmation';
+import { mailEnabled, sendMail as send, type Mail } from '../lib/mail';
+import { LOGO_PNG_BASE64 } from './logo';
+import { LOGO_CID, renderHtml, renderText, subjectFor, type OrderEmail } from './order-confirmation';
 import { hasStatusEmail, renderStatusHtml, renderStatusText, statusSubject } from './order-status';
 import { renderVerificationHtml, renderVerificationText, verificationSubject, type CodePurpose } from './verification-code';
+
+// Every email carries the emblem as an inline attachment, so it shows even when the website is down.
+const LOGO = { cid: LOGO_CID, filename: 'elare-logo.png', contentBase64: LOGO_PNG_BASE64, contentType: 'image/png' };
+const sendMail = (mail: Mail) => send({ ...mail, inline: [LOGO] });
 
 const storeUrl = () => (env('STORE_URL') || 'https://www.elarebeauty.store').replace(/\/$/, '');
 const supportEmail = () => env('SUPPORT_EMAIL') || env('SMTP_USER') || 'hello@elarebeauty.store';
