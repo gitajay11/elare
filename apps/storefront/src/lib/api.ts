@@ -74,7 +74,7 @@ export const api = {
 
   // Cart / checkout / orders -----------------------------------------------
   syncCart: (items: CartItemInput[], replace = false) => http.put<CartItemInput[]>('/cart', { items, replace }),
-  placeOrder: (p: { items: CartItemInput[]; address: Record<string, string>; paymentMethod: 'razorpay' | 'cod'; coupon?: string | null; redeemPoints?: number; note?: string }) =>
+  placeOrder: (p: { items: CartItemInput[]; address: Record<string, string>; paymentMethod: 'razorpay' | 'youpi' | 'cod'; coupon?: string | null; redeemPoints?: number; note?: string }) =>
     http.post<{ order_id: string; order_number: string; grand_total: number; payment_method: string; status: string }>('/checkout/orders', {
       items: p.items, address: p.address, payment_method: p.paymentMethod, coupon: p.coupon ?? null, redeem_points: p.redeemPoints ?? 0, note: p.note,
     }),
@@ -94,6 +94,8 @@ export const api = {
   razorpayOrder: (orderId: string) =>
     http.post<{ key_id: string; razorpay_order_id: string; amount: number; currency: string; order_number: string; prefill: { name?: string; email?: string; contact?: string }; callback_url: string }>(
       '/payments/razorpay/order', { order_id: orderId }),
+  youpiSession: (orderId: string) => http.post<{ checkout_url: string; payment_id: string }>('/payments/youpi/session', { order_id: orderId }),
+  youpiReconcile: (orderId: string) => http.post<{ paid: boolean; already?: boolean }>('/payments/youpi/reconcile', { order_id: orderId }),
   razorpayReconcile: (orderId: string) => http.post<{ paid: boolean; already?: boolean }>('/payments/razorpay/reconcile', { order_id: orderId }),
   razorpayVerify: (body: { order_id: string; razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) =>
     http.post<{ ok: boolean }>('/payments/razorpay/verify', body),

@@ -35,7 +35,7 @@ export interface OrderEmail {
   placedAt: Date;
   customerName: string;
   status: string;
-  paymentMethod: 'razorpay' | 'cod' | 'points';
+  paymentMethod: 'razorpay' | 'youpi' | 'cod' | 'points';
   paymentStatus: string;
   carrier: string | null;
   trackingNumber: string | null;
@@ -67,7 +67,7 @@ export const inr = (n: number) => '₹' + new Intl.NumberFormat('en-IN', { minim
 export const when = (d: Date) => new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' }).format(d) + ' IST';
 export const firstName = (name: string) => name.trim().split(/\s+/)[0] || 'there';
 
-export const PAYMENT_LABEL: Record<OrderEmail['paymentMethod'], string> = { razorpay: 'Paid online via Razorpay', cod: 'Cash on delivery', points: 'Paid with Élaré points' };
+export const PAYMENT_LABEL: Record<OrderEmail['paymentMethod'], string> = { razorpay: 'Paid online via Razorpay', youpi: 'Paid by UPI', cod: 'Cash on delivery', points: 'Paid with Élaré points' };
 export const STEPS = ['Confirmed', 'Packed', 'Shipped', 'Delivered'];
 export { C, SANS, SERIF };
 

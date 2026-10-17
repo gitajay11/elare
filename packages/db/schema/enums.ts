@@ -7,7 +7,7 @@ export const orderStatus = pgEnum('order_status', [
   'delivered', 'cancelled', 'refund_requested', 'refund_initiated', 'refund_processing', 'refunded',
 ]);
 export const paymentStatus = pgEnum('payment_status', ['pending', 'paid', 'failed', 'refunded', 'cod']);
-export const paymentMethod = pgEnum('payment_method', ['razorpay', 'cod', 'points']);
+export const paymentMethod = pgEnum('payment_method', ['razorpay', 'youpi', 'cod', 'points']);
 export const couponType = pgEnum('coupon_type', ['percentage', 'fixed', 'free_shipping', 'set_total']);
 export const couponScope = pgEnum('coupon_scope', ['all', 'products', 'categories']);
 export const reviewStatus = pgEnum('review_status', ['pending', 'approved', 'hidden']);

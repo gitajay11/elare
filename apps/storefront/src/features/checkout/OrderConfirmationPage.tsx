@@ -8,19 +8,20 @@ import { Seo, Button, PageLoader } from '@elare/ui';
 import { money, METHOD_LABEL } from '@elare/utils';
 import { useCart } from '@/features/cart/store';
 import { CLEAR_CART_FLAG, reconcilePayment } from './razorpay';
+import { reconcileYoupi } from './youpi';
 import NotFound from '@/app/NotFoundPage';
 
 export default function OrderConfirmation() {
   const { id = '' } = useParams();
   const { data: order, isLoading, refetch } = useQuery({ queryKey: ['order', id], queryFn: () => api.order(id) });
   // An online order can arrive here still "pending" when the payment completed
-  // in another app; ask the API to check Razorpay before showing "Almost there".
+  // in another app; ask the API to check the gateway before showing "Almost there".
   const [checking, setChecking] = useState(false);
   useEffect(() => {
-    if (!order || order.status !== 'pending' || order.payment_method !== 'razorpay') return;
+    if (!order || order.status !== 'pending' || (order.payment_method !== 'razorpay' && order.payment_method !== 'youpi')) return;
     let cancelled = false;
     setChecking(true);
-    reconcilePayment(id).then((paid) => { if (!cancelled && paid) return refetch(); }).finally(() => { if (!cancelled) setChecking(false); });
+    (order.payment_method === 'youpi' ? reconcileYoupi : reconcilePayment)(id).then((paid) => { if (!cancelled && paid) return refetch(); }).finally(() => { if (!cancelled) setChecking(false); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order?.status, id]);
@@ -77,7 +78,7 @@ export default function OrderConfirmation() {
         {order.points_earned > 0 && <p className="mt-3 inline-flex items-center gap-2 text-sm text-ink-soft"><Sparkles size={14} className="text-rose" /> You’ll receive <b className="text-ink">{order.points_earned} Élaré points</b> once it’s delivered.</p>}
 
         <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-          {order.status === 'pending' && order.payment_method === 'razorpay'
+          {order.status === 'pending' && (order.payment_method === 'razorpay' || order.payment_method === 'youpi')
             ? <Button variant="glow" size="lg" to={`/account/orders/${order.id}`} icon={<Package size={16} />}>Complete payment</Button>
             : <Button variant="glow" size="lg" to={`/account/orders/${order.id}`} icon={<Package size={16} />}>Track this order</Button>}
           <Button variant="outline" size="lg" to="/shop">Continue shopping</Button>

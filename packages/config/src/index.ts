@@ -51,7 +51,7 @@ export const ORDER_STATUS_LABEL: Record<string, string> = {
   refunded: 'Refunded',
 } satisfies Record<OrderStatus, string>;
 export const PAYMENT_LABEL: Record<string, string> = { pending: 'Unpaid', paid: 'Paid', failed: 'Failed', refunded: 'Refunded', cod: 'Pay on delivery' };
-export const METHOD_LABEL: Record<string, string> = { razorpay: 'Online (Razorpay)', cod: 'Cash on delivery', points: 'Élaré points' };
+export const METHOD_LABEL: Record<string, string> = { razorpay: 'Online (Razorpay)', youpi: 'UPI QR (YouPI)', cod: 'Cash on delivery', points: 'Élaré points' };
 
 /** Defaults used while the store configuration is loading. Real values come from the database. */
 export const DEFAULT_STORE_CONFIG = {

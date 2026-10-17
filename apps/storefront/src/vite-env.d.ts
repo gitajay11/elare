@@ -7,6 +7,9 @@ interface ImportMetaEnv {
   readonly VITE_SITE_URL?: string;
   readonly VITE_STORE_URL?: string;
   readonly VITE_ADMIN_URL?: string;
+  readonly VITE_RAZORPAY_KEY_ID?: string;
+  /** "true" offers UPI QR via the YouPI gateway at checkout. */
+  readonly VITE_YOUPI_ENABLED?: string;
 }
 interface ImportMeta {
   readonly env: ImportMetaEnv;

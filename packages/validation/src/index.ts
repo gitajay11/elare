@@ -89,7 +89,7 @@ export const checkoutAddressSchema = addressSchema.omit({ id: true, label: true,
 export const placeOrderSchema = z.object({
   items: cartItemsSchema.min(1),
   address: checkoutAddressSchema,
-  payment_method: z.enum(['razorpay', 'cod']),
+  payment_method: z.enum(['razorpay', 'youpi', 'cod']),
   coupon: z.string().trim().max(32).nullable().optional(),
   redeem_points: z.number().int().min(0).optional(),
   note: z.string().trim().max(300).optional(),

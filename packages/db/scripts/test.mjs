@@ -585,6 +585,21 @@ await expectError(() => db.query(`select password_reset_finish('priya@example.co
 await expectError(() => db.query(`select email_otp_issue('priya@example.com', 'h', 600, 30, 5, 'reset')`), 'denied', 'client cannot issue reset codes');
 await db.exec(`reset role`);
 
+console.log('\n# YouPI (second online gateway)');
+await as(cust.id);
+const yo = await rpc('place_order', { p_items: [{ variant_id: lipstick.id, quantity: 1 }], p_address: address, p_payment_method: 'youpi' });
+ok(yo.status === 'pending' && yo.payment_method === 'youpi', 'youpi order starts pending', yo);
+ok((await one(`select provider, status from payments where order_id = $1`, [yo.order_id])).provider === 'youpi', 'payment row is a youpi row');
+await as(null);
+await rpc('mark_payment_failed', { p_order_id: yo.order_id, p_raw: { event: 'EXPIRED' } });
+ok((await one(`select status from payments where order_id = $1`, [yo.order_id])).status === 'failed', 'mark_payment_failed works for youpi');
+await db.query(`update payments set status = 'pending' where order_id = $1`, [yo.order_id]);  // customer retries
+r = await rpc('mark_order_paid', { p_order_id: yo.order_id, p_provider_order_id: 'yp-session-1', p_provider_payment_id: '123456789012' });
+const yoRow = await one(`select o.status, o.payment_status, p.status pay, p.provider_order_id from orders o join payments p on p.order_id = o.id where o.id = $1`, [yo.order_id]);
+ok(r.already === false && yoRow.status === 'confirmed' && yoRow.payment_status === 'paid' && yoRow.pay === 'paid' && yoRow.provider_order_id === 'yp-session-1', 'mark_order_paid settles a youpi order', yoRow);
+ok((await rpc('mark_order_paid', { p_order_id: yo.order_id, p_provider_order_id: 'yp-session-1', p_provider_payment_id: 'x' })).already === true, 'youpi settlement is idempotent');
+ok((await one(`select p.status from payments p where p.order_id = $1`, [order2.order_id])).status === 'paid', 'razorpay orders still settle on their own row');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 await db.close();
 process.exit(failed ? 1 : 0);

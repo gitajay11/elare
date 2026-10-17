@@ -5,7 +5,7 @@ export type OrderStatus =
   | 'pending' | 'confirmed' | 'processing' | 'packed' | 'shipped' | 'out_for_delivery'
   | 'delivered' | 'cancelled' | 'refund_requested' | 'refund_initiated' | 'refund_processing' | 'refunded';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'cod';
-export type PaymentMethod = 'razorpay' | 'cod' | 'points';
+export type PaymentMethod = 'razorpay' | 'youpi' | 'cod' | 'points';
 /**
  * percentage / fixed take an amount off the items; free_shipping waives the
  * delivery fee; set_total discounts the bag down to `value` with free delivery

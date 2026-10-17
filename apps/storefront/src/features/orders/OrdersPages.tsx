@@ -8,6 +8,7 @@ import { money, formatDate, formatDateTime, ORDER_STATUS_LABEL, PAYMENT_LABEL, M
 import { toast } from '@/lib/ui-store';
 import NotFound from '@/app/NotFoundPage';
 import { payWithRazorpay, reconcilePayment } from '@/features/checkout/razorpay';
+import { payWithYoupi, reconcileYoupi } from '@/features/checkout/youpi';
 
 export function OrdersList() {
   const [page, setPage] = useState(1);
@@ -49,6 +50,7 @@ export function OrderDetail() {
   // A pending online order may already be paid (UPI app switch); check once.
   useEffect(() => {
     if (order?.status === 'pending' && order.payment_method === 'razorpay') reconcilePayment(id).then((paid) => { if (paid) qc.invalidateQueries({ queryKey: ['order', id] }); });
+    if (order?.status === 'pending' && order.payment_method === 'youpi') reconcileYoupi(id).then((paid) => { if (paid) qc.invalidateQueries({ queryKey: ['order', id] }); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order?.status, id]);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -56,7 +58,7 @@ export function OrderDetail() {
   const [reason, setReason] = useState('');
   const cancel = useMutation({ mutationFn: () => api.cancelOrder(id, reason), onSuccess: (o) => { qc.setQueryData(['order', id], o); qc.invalidateQueries({ queryKey: ['my-orders'] }); setCancelOpen(false); toast({ title: 'Order cancelled', description: 'Any points you used have been returned.' }); }, onError: (e) => toast({ title: 'Could not cancel', description: (e as Error).message, variant: 'error' }) });
   // Online orders stay reserved until paid; the customer can finish paying from here.
-  const pay = useMutation({ mutationFn: () => payWithRazorpay(id, order?.order_number ?? ''), onSuccess: () => { qc.invalidateQueries({ queryKey: ['order', id] }); qc.invalidateQueries({ queryKey: ['my-orders'] }); toast({ title: 'Payment received', description: 'Your order is confirmed.' }); }, onError: (e) => toast({ title: 'Payment not completed', description: (e as Error).message, variant: 'error' }) });
+  const pay = useMutation({ mutationFn: () => (order?.payment_method === 'youpi' ? payWithYoupi(id) : payWithRazorpay(id, order?.order_number ?? '')), onSuccess: () => { qc.invalidateQueries({ queryKey: ['order', id] }); qc.invalidateQueries({ queryKey: ['my-orders'] }); toast({ title: 'Payment received', description: 'Your order is confirmed.' }); }, onError: (e) => toast({ title: 'Payment not completed', description: (e as Error).message, variant: 'error' }) });
   const refund = useMutation({ mutationFn: () => api.requestRefund(id, reason), onSuccess: (o) => { qc.setQueryData(['order', id], o); setRefundOpen(false); toast({ title: 'Refund requested', description: 'We’ll review it within 2 business days.' }); }, onError: (e) => toast({ title: 'Could not request refund', description: (e as Error).message, variant: 'error' }) });
 
   if (isLoading) return <Skeleton className="h-64" />;
@@ -73,7 +75,7 @@ export function OrderDetail() {
           <p className="text-[13px] text-mist">Placed {formatDateTime(order.placed_at)} · {METHOD_LABEL[order.payment_method]} · {PAYMENT_LABEL[order.payment_status]}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {order.status === 'pending' && order.payment_method === 'razorpay' && order.payment_status !== 'paid' && <Button size="sm" loading={pay.isPending} onClick={() => pay.mutate()}>Complete payment</Button>}
+          {order.status === 'pending' && (order.payment_method === 'razorpay' || order.payment_method === 'youpi') && order.payment_status !== 'paid' && <Button size="sm" loading={pay.isPending} onClick={() => pay.mutate()}>Complete payment</Button>}
           {canCancel && <Button size="sm" variant="outline" onClick={() => setCancelOpen(true)}>Cancel order</Button>}
           {canRefund && <Button size="sm" variant="outline" onClick={() => setRefundOpen(true)}>Request a refund</Button>}
         </div>

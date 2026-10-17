@@ -8,6 +8,7 @@ import { body, HttpError } from '../../lib/http';
 import { asOwner, rpc } from '../../lib/db';
 import { requireAuth, userOf, type Env } from '../../middleware';
 import { sendOrderConfirmation } from '../../emails';
+import { youpiRouter } from './youpi';
 
 const orderRefSchema = z.object({ order_id: z.string().uuid() });
 const razorpayAuth = () => 'Basic ' + Buffer.from(`${need('RAZORPAY_KEY_ID')}:${need('RAZORPAY_KEY_SECRET')}`).toString('base64');
@@ -46,6 +47,8 @@ async function reconcile(orderId: string, providerOrderId: string): Promise<{ pa
  * outside the caller's RLS context — after checking the order belongs to them.
  */
 export const paymentsRouter = new Hono<Env>()
+  // UPI QR via the self-hosted YouPI gateway (see ./youpi).
+  .route('/youpi', youpiRouter)
   .post('/razorpay/order', requireAuth, async (c) => {
     const { order_id } = await body(c, orderRefSchema);
     const user = userOf(c);

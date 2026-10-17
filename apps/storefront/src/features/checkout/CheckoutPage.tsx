@@ -3,7 +3,7 @@ import { signInPath } from '@/lib/routes';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Check, ChevronDown, ChevronLeft, CreditCard, Lock, MapPin, Truck, Wallet } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, CreditCard, Lock, MapPin, QrCode, Truck, Wallet } from 'lucide-react';
 import { api } from '@/lib/api';
 import { type Address } from '@elare/types';
 import { Seo, useAuth, Button, Input, Checkbox, PageLoader, Select } from '@elare/ui';
@@ -14,6 +14,7 @@ import { useQuote } from '@/lib/hooks';
 import { Logo } from '@/components/layout/Navbar';
 import { CartLines, CouponBox, GiftProgress, PointsBox, Totals, useDisplayLines } from '@/features/cart/CartParts';
 import { CLEAR_CART_FLAG, RAZORPAY_ENABLED, payWithRazorpay } from './razorpay';
+import { YOUPI_ENABLED, payWithYoupi } from './youpi';
 
 type Step = 'address' | 'delivery' | 'payment';
 const STEPS: { key: Step; label: string; icon: React.ReactNode }[] = [
@@ -52,7 +53,7 @@ function CheckoutFlow({ userEmail, userName, userPhone }: { userEmail: string; u
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saveAddress, setSaveAddress] = useState(true);
   const [selectedAddress, setSelectedAddress] = useState<string | 'new'>('new');
-  const [method, setMethod] = useState<'razorpay' | 'cod'>(RAZORPAY_ENABLED ? 'razorpay' : 'cod');
+  const [method, setMethod] = useState<'razorpay' | 'youpi' | 'cod'>(RAZORPAY_ENABLED ? 'razorpay' : YOUPI_ENABLED ? 'youpi' : 'cod');
   const [note, setNote] = useState('');
   const [placing, setPlacing] = useState(false);
   // Phones: the summary sits above the steps, collapsed to one line until tapped.
@@ -120,13 +121,15 @@ function CheckoutFlow({ userEmail, userName, userPhone }: { userEmail: string; u
       let order = pendingOrder;
       if (!order) {
         order = await api.placeOrder({ items: toInputs(items), address, paymentMethod: method, coupon, redeemPoints, note });
-        if (method === 'razorpay') setPendingOrder(order);
+        if (method !== 'cod') setPendingOrder(order);
       }
       if (method === 'cod') {
         finish(order.order_id);
         return;
       }
-      await payWithRazorpay(order.order_id, order.order_number);
+      // UPI QR leaves for the gateway's page and comes back to the confirmation page.
+      if (method === 'youpi') await payWithYoupi(order.order_id);
+      else await payWithRazorpay(order.order_id, order.order_number);
       finish(order.order_id);
     } catch (e) {
       toast({ title: 'Checkout could not be completed', description: (e as Error).message, variant: 'error' });
@@ -225,8 +228,11 @@ function CheckoutFlow({ userEmail, userName, userPhone }: { userEmail: string; u
                     {RAZORPAY_ENABLED && (
                       <PaymentOption selected={method === 'razorpay'} onSelect={() => setMethod('razorpay')} icon={<CreditCard size={18} />} title="Pay online" description="UPI, cards, net banking and wallets via Razorpay. Secured by 256-bit encryption." />
                     )}
+                    {YOUPI_ENABLED && (
+                      <PaymentOption selected={method === 'youpi'} onSelect={() => setMethod('youpi')} icon={<QrCode size={18} />} title="Pay by UPI QR" description="Scan and pay from any UPI app — GPay, PhonePe, Paytm or your bank. Paid straight to Élaré." />
+                    )}
                     <PaymentOption selected={method === 'cod'} onSelect={() => setMethod('cod')} icon={<Wallet size={18} />} title="Cash on delivery" description="Pay when your order arrives." />
-                    {!RAZORPAY_ENABLED && <p className="text-[12.5px] text-mist">Online payments will appear here once the payment gateway is configured.</p>}
+                    {!RAZORPAY_ENABLED && !YOUPI_ENABLED && <p className="text-[12.5px] text-mist">Online payments will appear here once the payment gateway is configured.</p>}
                   </div>
                   <div className="mt-6">
                     <label htmlFor="note" className="block text-[12px] font-semibold uppercase tracking-[0.12em] text-ink-soft">Order note (optional)</label>
